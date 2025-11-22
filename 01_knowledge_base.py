@@ -2,6 +2,7 @@
 from pathlib import Path
 import fitz
 from trafilatura import extract
+import re
 
 # Directories
 raw_dir = Path("data/01_raw")
@@ -28,7 +29,24 @@ def extract_text_from_pdf(file_path: Path) -> str:
         with fitz.open(file_path) as doc:
             for page in doc:
                 text += page.get_text("text")
-        return text.strip()
+
+        #  Cleaning steps
+
+        # Remove control characters
+        text = re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', text)
+        # Merge lines that are not paragraph breaks
+        text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+        # Collapse multiple blank lines into a single paragraph break
+        text = re.sub(r'\n\s*\n+', '\n\n', text)
+        # Collapse multiple spaces/tabs into one
+        text = re.sub(r'[ \t]+', ' ', text)
+        # Replace sequences of 4 or more dots with a paragraph break
+        text = re.sub(r'\.{4,}', '\n', text)
+        # Strip leading/trailing whitespace
+        text = text.strip()
+
+        return text
+    
     except Exception as e:
         print(f"[PDF ERROR] {file_path.name}: {e}")
         return ""
