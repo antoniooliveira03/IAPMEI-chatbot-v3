@@ -1,0 +1,10 @@
+/env
+
+/data/raw
+/data/enriched
+/data/segmented
+/data/chunks
+
+
+.env
+__pycache__/
