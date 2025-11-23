@@ -11,8 +11,8 @@ client = OpenAI()
 vector_dir = Path("data/04_vectorized")
 chunk_dir = Path("data/03_chunked")
 
-# Load Vectors and Metadata
 
+# Load Vectors and Metadata
 def load_all_indexes(vector_dir: Path, chunk_dir: Path):
 
     all_indexes = []
@@ -62,12 +62,34 @@ def retrieve_context(query: str, all_indexes: list, k=5):
 
     return all_chunks
 
+# Context Necessary?
+def needs_context(query: str, model="gpt-4o-mini") -> bool:
+    prompt = f"""
+            És um assistente que determina se uma pergunta necessita de contexto adicional para ser respondida.
+            Responde com "SIM" se precisares de contexto dos documentos fornecidos, ou "NÃO" se puderes responder sem contexto.
 
-# User Input
-user_query = input("Enter your question: ")
+            Pergunta: {query}
+            Resposta (SIM ou NÃO):
+            """
+
+    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": prompt}
+                        ],
+                        temperature=0
+                    )
+
+    answer = response.choices[0].message.content.strip().upper()
+
+    return answer == "SIM"
+
 
 # Answer
 def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
+
+    global conversation_history
+    max_history = 10 
 
     # Safety Check
     mod_result = client.moderations.create(
@@ -78,9 +100,13 @@ def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
         return "Query flagged by moderation. Unable to provide an answer."
     
     # Retrieve Context
-    context_chunks = retrieve_context(user_query, all_indexes, k=k)
+    context_needed = needs_context(user_query)
 
-    context_text = "\n\n".join([c["text"] for c in context_chunks])
+    context_text = ""
+    if context_needed:
+        context_chunks = retrieve_context(user_query, all_indexes, k=k)
+
+        context_text = "\n\n".join([c["text"] for c in context_chunks])
 
     # Prompt
     prompt = f"""
@@ -102,19 +128,46 @@ def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
             """
 
     # LLM
+    messages = [{"role": "system", "content": prompt}]
+
+    conversation_history = conversation_history[-max_history:]
+
+    for msg in conversation_history:
+        messages.append(msg)
+
+    messages.append({
+        "role": "user",
+        "content": f"Contexto:\n{context_text}\n\nPergunta: {user_query}"
+    })
+
+
     response = client.chat.completions.create(
                         model="gpt-4o-mini",
-                        messages=[{"role": "user", "content": prompt}],
+                        messages = messages,
                         temperature=0
                     )
 
     final_answer = response.choices[0].message.content
 
+    conversation_history.append({"role": "user", "content": user_query})
+    conversation_history.append({"role": "assistant", "content": final_answer})
+
+
     print(final_answer)
 
+
+# Save conversation history
+conversation_history = []
 
 # Load all indexes
 all_indexes = load_all_indexes(vector_dir, chunk_dir)
 
 # Get answer
-answer(user_query, all_indexes, k=5)
+while True:
+    user_query = input("\nPergunta: \n")
+
+    if user_query.lower().strip() in ["sair", "exit", "quit"]:
+        print("Assistente: Até à próxima!")
+        break
+
+    answer(user_query, all_indexes, k=5)
