@@ -9,32 +9,24 @@ from dotenv import load_dotenv
 load_dotenv()
 client = OpenAI()
 vector_dir = Path("data/04_vectorized")
-chunk_dir = Path("data/03_chunked")
 
 
 # Load Vectors and Metadata
-def load_all_indexes(vector_dir: Path, chunk_dir: Path):
+def load_single_index(vector_dir: Path):
 
-    all_indexes = []
+    index_path = vector_dir / f"corpus.index"
+    meta_path = vector_dir / f"corpus_metadata.json"
 
-    for index_file in vector_dir.glob("*.index"):
+    # Load FAISS index
+    index = faiss.read_index(str(index_path))
 
-        # Load FAISS index
-        index = faiss.read_index(str(index_file))
+    # Load metadata
+    with open(meta_path, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
 
-        # Load metadata JSON from 03_chunked
-        meta_file = chunk_dir / (index_file.stem + ".json")
+    return index, metadata
 
-        with open(meta_file, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
 
-        all_indexes.append({
-            "index": index,
-            "metadata": metadata,
-            "name": index_file.stem
-        })
-        
-    return all_indexes
 
 
 # Embed Query
@@ -46,21 +38,11 @@ def embed_query(query: str) -> np.ndarray:
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
 
 # Get Context
-def retrieve_context_single(query: str, index: faiss.IndexFlatL2, metadata: list, k=5):
+def retrieve_context(query: str, index: faiss.IndexFlatL2, metadata: list, k=5):
     q_vec = embed_query(query)
     D, I = index.search(q_vec, k)
     return [metadata[i] for i in I[0]]
 
-def retrieve_context(query: str, all_indexes: list, k=5):
-    all_chunks = []
-
-    for idx_dict in all_indexes:
-        index = idx_dict["index"]
-        metadata = idx_dict["metadata"]
-        chunks = retrieve_context_single(query, index, metadata, k=k)
-        all_chunks.extend(chunks)
-
-    return all_chunks
 
 # Context Necessary?
 def needs_context(query: str, model="gpt-4o-mini") -> bool:
@@ -86,7 +68,7 @@ def needs_context(query: str, model="gpt-4o-mini") -> bool:
 
 
 # Answer
-def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
+def answer(user_query: str, index, metadata,  k=5, model="gpt-4o-mini") -> str:
 
     global conversation_history
     max_history = 10 
@@ -99,14 +81,21 @@ def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
     if mod_result.results[0].flagged:
         return "Query flagged by moderation. Unable to provide an answer."
     
+    # Embed query
+    q_vec = embed_query(user_query)
+    
     # Retrieve Context
     context_needed = needs_context(user_query)
+    context_chunks, distances = [], []
 
     context_text = ""
     if context_needed:
-        context_chunks = retrieve_context(user_query, all_indexes, k=k)
+        D, I = index.search(q_vec, k)
+        context_chunks = [metadata[i] for i in I[0]]
+        distances = D[0] 
 
         context_text = "\n\n".join([c["text"] for c in context_chunks])
+
 
     # Prompt
     prompt = f"""
@@ -155,19 +144,24 @@ def answer(user_query: str, all_indexes, k=5, model="gpt-4o-mini") -> str:
 
     print(final_answer)
 
+    return final_answer, context_chunks, distances
+
 
 # Save conversation history
 conversation_history = []
 
 # Load all indexes
-all_indexes = load_all_indexes(vector_dir, chunk_dir)
+index, metadata = load_single_index(vector_dir)
 
 # Get answer
-while True:
-    user_query = input("\nPergunta: \n")
+def main():
+    index, metadata = load_single_index(vector_dir)
+    while True:
+        user_query = input("\nPergunta: \n")
+        if user_query.lower().strip() in ["sair", "exit", "quit"]:
+            print("Assistente: Até à próxima!")
+            break
+        answer(user_query, index, metadata, k=5)
 
-    if user_query.lower().strip() in ["sair", "exit", "quit"]:
-        print("Assistente: Até à próxima!")
-        break
-
-    answer(user_query, all_indexes, k=5)
+if __name__ == "__main__":
+    main()
