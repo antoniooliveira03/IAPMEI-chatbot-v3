@@ -52,6 +52,23 @@ def extract_text_from_pdf(file_path: Path) -> str:
         return ""
     
 
+def extract_text_from_txt(file_path: Path) -> str:
+    """Load and lightly clean text from a TXT file."""
+    try:
+        text = file_path.read_text(encoding="utf-8", errors="ignore")
+
+        # Basic cleaning (similar to PDF but lighter)
+        text = re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', text)
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n\s*\n+', '\n\n', text)
+
+        return text.strip()
+
+    except Exception as e:
+        print(f"[TXT ERROR] {file_path.name}: {e}")
+        return ""
+
+
 # Run
 for file_path in raw_dir.iterdir():
     suffix = file_path.suffix.lower()
@@ -60,6 +77,8 @@ for file_path in raw_dir.iterdir():
         text = extract_text_from_html(file_path)
     elif suffix == ".pdf":
         text = extract_text_from_pdf(file_path)
+    elif suffix == ".txt":
+        text = extract_text_from_txt(file_path)
     else:
         print(f"[UNSUPPORTED FILE TYPE] {file_path.name}")
         continue
