@@ -27,8 +27,6 @@ def load_single_index(vector_dir: Path):
     return index, metadata
 
 
-
-
 # Embed Query
 def embed_query(query: str) -> np.ndarray:
     response = client.embeddings.create(
@@ -36,6 +34,7 @@ def embed_query(query: str) -> np.ndarray:
         input=query
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
+
 
 # Get Context
 def retrieve_context(query: str, index: faiss.IndexFlatL2, metadata: list, k=5):
