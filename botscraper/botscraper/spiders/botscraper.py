@@ -4,40 +4,53 @@ import io
 import re
 from bs4 import BeautifulSoup
 from scrapy.linkextractors import LinkExtractor
+from urllib.parse import urlparse
+
+
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    allowed_domains = ["portugal2030.pt"]
+    allowed_domains = ["portugal2030.pt", "www.portugal2030.pt"]
     start_urls = ["https://portugal2030.pt/"]
 
-    # Seed keywords
-    seed_keywords = ["aviso", "avisos", "programa", "programas"]
+    def same_host(self, url):
+        host = urlparse(url).netloc.lower()
+        return host in {"portugal2030.pt", "www.portugal2030.pt"}
 
     def parse(self, response):
-        content_type = response.headers.get('Content-Type', b'').decode('utf-8').lower()
-        text = None
+        content_type = response.headers.get("Content-Type", b"").decode().lower()
 
-        # Extract content if HTML or PDF
-        if "text/html" in content_type:
+        text = None
+        is_pdf = response.url.lower().endswith(".pdf") or "application/pdf" in content_type
+        is_html = "text/html" in content_type
+
+        # ---- Extract content ----
+        if is_html:
             text = self.extract_html_text(response.text)
-        elif "application/pdf" in content_type:
+        elif is_pdf:
             text = self.extract_pdf_text(response.body)
 
-        # Yield only if relevant
-        if text and (any(kw in response.url.lower() for kw in self.seed_keywords) or "application/pdf" in content_type):
+        # ---- Yield item ----
+        if text:
             yield {
                 "url": response.url,
-                "type": "pdf" if "application/pdf" in content_type else "html",
+                "type": "pdf" if is_pdf else "html",
                 "depth": response.meta.get("depth", 0),
                 "text": text
             }
 
-        # Follow links
-        # If the current page is a seed page or PDF, follow all internal links
-        if any(kw in response.url.lower() for kw in self.seed_keywords) or "application/pdf" in content_type:
-            link_extractor = LinkExtractor(allow_domains=self.allowed_domains)
+        # ---- FOLLOW LINKS ONLY FROM HTML ----
+        if is_html:
+            link_extractor = LinkExtractor()
             for link in link_extractor.extract_links(response):
-                yield scrapy.Request(link.url, callback=self.parse)
+                if self.same_host(link.url):
+                    yield response.follow(
+                        link.url,
+                        callback=self.parse,
+                        errback=self.errback_log
+                    )
+
+
 
     # ---- Extraction Helpers ----
     def extract_html_text(self, html):

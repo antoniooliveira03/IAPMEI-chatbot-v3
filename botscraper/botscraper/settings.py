@@ -88,3 +88,8 @@ FEED_EXPORT_ENCODING = "utf-8"
 
 FEEDS = {
     "output.json": {"format": "json", "overwrite": True}}
+
+DEPTH_LIMIT = 3
+DEPTH_STATS_VERBOSE = True
+
+LOG_LEVEL = "INFO"
