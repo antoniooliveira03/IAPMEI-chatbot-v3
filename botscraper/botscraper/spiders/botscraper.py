@@ -13,15 +13,12 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    start_urls = ["https://www.norte2030.pt/"]
+    start_urls = ["https://portugal2030.pt/tag/feder/"]
 
-    allowed_domains = ["norte2030", "www.norte2030.pt"]
+    allowed_domains = ["portugal2030.pt"]
+
 
     # ---------- Helpers ----------
-    def same_host(self, url):
-        """Allow only exact portugal2030.pt domains (no subdomains)."""
-        host = urlparse(url).netloc.lower()
-        return host in self.allowed_domains
 
     def errback_log(self, failure):
         """Log failed requests without crashing the spider."""
@@ -112,13 +109,12 @@ class Portugal2030Spider(scrapy.Spider):
             )
 
             for link in link_extractor.extract_links(fake_response):
-                if self.same_host(link.url):
-                    # Skip obvious junk pages (login, privacy, termos)
-                    if any(x in link.url.lower() for x in ["login", "cookies", "privacy", "termos"]):
-                        continue
-                    yield response.follow(
-                        link.url,
-                        callback=self.parse,
-                        errback=self.errback_log,
-                        dont_filter=False
-                    )
+                if any(x in link.url.lower() for x in ["login", "cookies", "privacy", "termos"]):
+                    continue
+
+                yield response.follow(
+                    link.url,
+                    callback=self.parse,
+                    errback=self.errback_log
+                )
+

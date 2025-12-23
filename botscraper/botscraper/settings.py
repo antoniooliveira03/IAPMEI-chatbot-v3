@@ -87,7 +87,7 @@ HTTPCACHE_DIR = "httpcache"
 FEED_EXPORT_ENCODING = "utf-8"
 
 FEEDS = {
-    "norte2030.json": {"format": "json", "overwrite": True}}
+    "/Users/antoniooliveira/Documents/GitHub/IAPMEI-chatbot-v3/scraped/FEDER_pt2030.json": {"format": "json", "overwrite": True}}
 
 DEPTH_LIMIT = 3
 DEPTH_STATS_VERBOSE = True
