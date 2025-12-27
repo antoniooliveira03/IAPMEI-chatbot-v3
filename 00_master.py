@@ -2,9 +2,8 @@ import subprocess
 
 # List your scripts in order
 scripts = [
-    "01_load_clean.py",
-    "02_chunking.py",
-    "03_vectorize.py"
+    "01_cleaning.py",
+    "02_preprocrssing.py"
 ]
 
 for script in scripts:
