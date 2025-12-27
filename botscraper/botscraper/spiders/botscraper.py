@@ -13,9 +13,9 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    start_urls = ["https://portugal2030.pt/tag/feder/"]
+    start_urls = ["https://portugal2030.pt/"]
 
-    allowed_domains = ["portugal2030.pt"]
+    allowed_domains = ["portugal2030.pt", "www.portugal2030.pt",]
 
 
     # ---------- Helpers ----------
