@@ -60,8 +60,8 @@ def db(json_file: Path):
 # Create FAISS index and metadata
 index, metadata = db(chunk_dir)
 # Save FAISS index and metadata
-faiss_index_path = vector_dir / "corpus.index"
-metadata_path = vector_dir / "corpus_metadata.json"
+faiss_index_path = vector_dir / "db.index"
+metadata_path = vector_dir / "db.json"
 
 faiss.write_index(index, str(faiss_index_path))
 
