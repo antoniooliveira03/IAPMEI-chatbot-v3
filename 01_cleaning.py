@@ -1,29 +1,125 @@
-# compete2030
-# Saltar para o conteúdo principal da página Modo claro Modo escuro pt PT EN This page is only available in Portuguese. Cancel Proceed to English site Abrir formulário de pesquisa COMPETE 2030 Quem 
-# Somos Estrutura e Objetivos Operações Monitorização Comité de Acompanhamento Avaliação Ambiental Estratégica Estratégia Anti-Fraude Avisos de Concursos Avisos Perguntas Frequentes Guias 
-# Regulamentação Comunicação Notícias Agenda Regras de Publicitação Abrir formulário de pesquisa Modo escuro Modo claro Início
-# Esta página foi útil para si? Subscreva a newsletter Compete 2030 Receba primeiro todas as novidades no seu email Subscrever Concordo com os Termos e Condições Deixe este campo vazio se for humano: Morada: Edifício Expo 98 Av. D.João II, nº52 - 3º Piso 1990-096 Lisboa Direções Contactos: Tel: 211 548 700 info@compete2030.gov.pt Contactos Denúncias Recrutamento Área Reservada Política de Privacidade do COMPETE 2030 (RGPD) Acessibilidade Termos e Condições Siga-nos nas redes sociais © COMPETE 2030. Todos os direitos reservados. A carregar
+import re
+import json
+from pathlib import Path
 
-# centro2030
-# Programas do Portugal 2030 PESSOAS 2030 COMPETE 2030 Sustentável 2030 Mar 2030 Norte 2030 Lisboa 2030 Alentejo 2030 Algarve 2030 Açores 2030 Madeira 2030 PAT 2030 Portugal 2030 Follow Follow Follow Follow Ajuda Eventos Notícias O Portugal 2030 O Portugal 2030 em 3 minutos O que é o Portugal 2030 Programas Documentos e recursos Legislação O Centro 2030 Avisos de concurso O Portugal 2030 em 3 minutos O que é o Portugal 2030 Documentos e recursos Programas Ajuda Eventos Notícias O Centro 2030 Avisos de concurso Plano Anual de Avisos Projetos Aprovados Antifraude
-# Eventos Notícias Recursos Ajuda Ligações Úteis Contacte-nos Contactos Denúncias © 2023 Centro 2030 Política de Acessibilidade Política de Privacidade Termos e Condições
+# =========================
+# Boilerplate patterns
+# =========================
 
-# alentejo_portugal2030
-# Programas do Portugal 2030 PESSOAS 2030 COMPETE 2030 Sustentável 2030 Mar 2030 Centro Norte 2030 Lisboa 2030 Algarve 2030 Açores 2030 Madeira 2030 PAT 2030 Portugal 2030 Follow Follow Follow Follow Follow Europa na minha região FTJ – Alentejo Litoral Ajuda Eventos Notícias O Portugal 2030 O Portugal 2030 em 3 minutos O que é o Portugal 2030 Programas Documentos e recursos Legislação O Alentejo 2030 O que é o Alentejo 2030 Lista de Operações Aprovadas Comité de Acompanhamento Documentação Legislação Avisos de concurso Plano Anual de Avisos Regras de Comunicação Ajuda O Alentejo 2030 O que é o Alentejo 2030 Lista de Operações Aprovadas Comité de Acompanhamento Documentação Legislação Avisos de concurso Plano Anual de Avisos Regras de Comunicação
-# Eventos Notícias Recursos Ajuda Ligações Úteis Contacte-nos Contactos © 2023 Alentejo 2030 Política de Acessibilidade Política de Privacidade Termos e Condições Este site utiliza cookies para permitir uma melhor experiência por parte do utilizador. Ao navegar no site estará a consentir a sua utilização
+FILE_PATTERNS = {
+    "compete2030": [
+        r"Saltar para o conteúdo principal.*?Início",
+        r"Esta página foi útil para si\?.*?A carregar",
+        r"© COMPETE 2030.*$"
+    ],
+    "centro2030": [
+        r"Programas do Portugal 2030.*?Avisos de concurso",
+        r"© 2023 Centro 2030.*$"
+    ],
+    "alentejo_portugal2030": [
+        r"Programas do Portugal 2030.*?Regras de Comunicação",
+        r"Este site utiliza cookies.*$"
+    ],
+    "algarve_portugal2030": [
+        r"Programas do Portugal 2030.*?Área Reservada",
+        r"Este site utiliza cookies.*$"
+    ],
+    "lisboa_portugal2030": [
+        r"Programas do Portugal 2030.*?Plano Anual de Avisos",
+        r"Este site utiliza cookies.*$"
+    ],
+    "norte2030": [
+        r"Ir para o conteúdo principal.*?Pesquisar",
+        r"© 2024 NORTE 2030.*$"
+    ],
+    "portugal2030": [
+        r"Saltar para o conteúdo principal.*?Plano Anual de Avisos",
+        r"Este site utiliza cookies.*$"
+    ]
+}
 
-# algarve_portugal2030
-# Programas do Portugal 2030 PESSOAS 2030 COMPETE 2030 Sustentável 2030 Mar 2030 Centro 2030 Norte 2030 Lisboa 2030 Alentejo 2030 Açores 2030 Madeira 2030 PAT 2030 Portugal 2030 Follow Follow Follow Follow Ajuda Eventos Notícias O Portugal 2030 O Portugal 2030 em 3 minutos O que é o Portugal 2030 Programas Documentos e recursos Legislação O Algarve 2030 Avisos de concurso O Portugal 2030 em 3 minutos O que é o Portugal 2030 Documentos e recursos Programas Ajuda Eventos Notícias O Algarve 2030 Avisos de concurso Plano Anual de Avisos Projetos Aprovados Área Reservada 
-# Algarve 2030 Eventos Notícias Recursos Ajuda Ligações Úteis Contacte-nos Contactos Denúncias © 2023 Algarve 2030 Política de Acessibilidade Política de Privacidade Termos e Condições Este site utiliza cookies para permitir uma melhor experiência por parte do utilizador. Ao navegar no site estará a consentir a sua utilização. Ok
+# =========================
+# Cleaning functions
+# =========================
 
-# lisboa_portugal2030
-# Programas do Portugal 2030 PESSOAS 2030 COMPETE 2030 Sustentável 2030 Mar 2030 Centro 2030 Norte 2030 Alentejo 2030 Algarve 2030 Açores 2030 Madeira 2030 PAT 2030 Portugal 2030 Follow Follow Follow Follow Ajuda Eventos Notícias O Portugal 2030 O Portugal 2030 em 3 minutos O que é o Portugal 2030 Programas Documentos e recursos Legislação O Lisboa 2030 Avisos de concurso O Portugal 2030 em 3 minutos O que é o Portugal 2030 Documentos e recursos Programas Ajuda Eventos Notícias Denúncias O Lisboa 2030 Avisos de concurso Plano Anual de Avisos 
-# Eventos Notícias Recursos Ajuda Ligações Úteis Contacte-nos Contactos © 2023 Lisboa 2030 Política de Acessibilidade Política de Privacidade Termos e Condições Este site utiliza cookies para permitir uma melhor experiência por parte do utilizador. Ao navegar no site estará a consentir a sua utilização. Ok
+def base_clean_text(text: str) -> str:
+    """Standard cleaning: remove excessive dots, whitespace, and line breaks."""
+    if not text:
+        return ""
 
-# norte2030
-# Ir para o conteúdo principal Norte 2030 O Programa Documentos Execução Candidaturas Avisos Processo de Candidatura Plano Anual de Avisos Projetos Regras de Comunicação Puxa o Norte para cima Projetos Aprovados Institucional Modelo de Governação Autoridade de Gestão Comité de Acompanhamento Comunicação e Imprensa Recursos Humanos Norte 2030 O Programa Documentos Execução Candidaturas Avisos Processo de Candidatura Plano Anual de Avisos Projetos Regras de Comunicação Puxa o Norte para cima Projetos Aprovados Institucional Modelo de Governação Autoridade de Gestão Comité de Acompanhamento Comunicação e Imprensa Recursos Humanos Pesquisar 
-# © 2024 NORTE 2030. Todos os direitos reservados Norte 2030 O Programa Documentos Execução Candidaturas Avisos Processo de Candidatura Plano Anual de Avisos Projetos Regras de Comunicação Puxa o Norte para cima Projetos Aprovados Institucional Modelo de Governação Autoridade de Gestão Comité de Acompanhamento Comunicação e Imprensa Recursos Humanos Norte 2030 O Programa Documentos Execução Candidaturas Avisos Processo de Candidatura Plano Anual de Avisos Projetos Regras de Comunicação Puxa o Norte para cima Projetos Aprovados Institucional Modelo de Governação Autoridade de Gestão Comité de Acompanhamento Comunicação e Imprensa Recursos Humanos Canal de Denúncias Política de Privacidade Política de Cookies
+    text = re.sub(r'\.{3,}', ' ', text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r'[ \t]*\n[ \t]*', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r'\s+([.,;:!?])', r'\1', text)
 
-# portugal2030
-# Saltar para o conteúdo principal Programas do Portugal 2030 PESSOAS 2030 COMPETE 2030 Sustentável 2030 Mar 2030 Norte 2030 Centro 2030 Lisboa 2030 Alentejo 2030 Algarve 2030 Açores 2030 Madeira 2030 PAT 2030 Pesquisa de conteúdo Tipo de conteúdo Artigos Páginas Eventos Ajuda Legislação Follow Follow Follow Follow Follow Ajuda Eventos Notícias O Portugal 2030 em 3 minutos O que é o Portugal 2030 Programas Avisos Plano Anual de Avisos Resultados Documentação Legislação Ajuda Eventos Notícias O Portugal 2030 O Portugal 2030 em 3 minutos O que é o Portugal 2030 Resultados Monitorização Territorial Documentação Legislação Programas Avisos Plano Anual de Avisos
-# Portugal 2030 Eventos Notícias Recursos Ajuda Ligações Úteis Contactos Contactos © 2023 Portugal 2030 Acessibilidade Política de Privacidade Termos e Condições Este site utiliza cookies para permitir uma melhor experiência por parte do utilizador. Ao navegar no site estará a consentir a sua utilização. Ok Não Política de Privacidade
+    return text.strip()
+
+
+def clean_text_with_boilerplate(text: str, file_stem: str) -> str:
+    """
+    Apply base cleaning + remove site-specific boilerplate
+    based on the JSON filename (file_stem).
+    """
+    # Step 1: base cleaning
+    cleaned = base_clean_text(text)
+
+    # Step 2: boilerplate removal
+    for pattern in FILE_PATTERNS.get(file_stem, []):
+        cleaned = re.sub(
+            pattern,
+            "",
+            cleaned,
+            flags=re.DOTALL | re.IGNORECASE
+        )
+
+    # Step 3: final normalization
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+    return cleaned
+
+# =========================
+# Main pipeline
+# =========================
+
+def main():
+    SCRAPED_DIR = Path("data/01_extracted")
+    OUTPUT_DIR = Path("data/02_clean")
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    for json_file in SCRAPED_DIR.glob("*.json"):
+        file_stem = json_file.stem  # e.g. "algarve_portugal2030"
+        print(f"Cleaning: {json_file.name}")
+
+        with open(json_file, "r", encoding="utf-8") as f:
+            records = json.load(f)
+
+        # Clean each page
+        for record in records:
+            record["text"] = clean_text_with_boilerplate(
+                record.get("text", ""),
+                file_stem
+            )
+
+        # Drop empty / very small pages
+        records = [
+            r for r in records
+            if len(r.get("text", "").split()) >= 50
+        ]
+
+        # Save cleaned file
+        out_path = OUTPUT_DIR / json_file.name
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+
+    print("Cleaning pipeline finished successfully.")
+
+# =========================
+# Entry point
+# =========================
+
+if __name__ == "__main__":
+    main()

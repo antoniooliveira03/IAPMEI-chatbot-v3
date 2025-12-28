@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+import hashlib
 
 load_dotenv()
 
@@ -38,6 +39,14 @@ def simple_clean(text: str) -> str:
 
 def chunk_text(text: str) -> List[str]:
     return splitter.split_text(text)
+
+def chunk_fingerprint(text: str) -> str:
+    """
+    Create a stable fingerprint for a chunk.
+    """
+    normalized = re.sub(r"\s+", " ", text.lower()).strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
 
 # ---------------- Semantic Metadata ----------------
 
@@ -72,43 +81,58 @@ def extract_semantic_metadata(text: str) -> dict:
 
 # ---------------- Main Pipeline ----------------
 
+from pathlib import Path
+import json
+
 def main():
-    json_dir = "test"  # folder with your JSON files
-    output_file = "chunked_with_metadata.json"
+    input_dir = Path("data/02_clean")
+    output_dir = Path("data/03_chunked")
 
-    print("Loading JSON files...")
-    docs = load_jsons(json_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Cleaning text...")
-    for doc in docs:
-        doc["text"] = simple_clean(doc["text"])
+    for json_path in input_dir.glob("*.json"):
+        print(f"\nProcessing file: {json_path.name}")
 
-    print("Chunking text and generating semantic metadata per chunk...")
-    chunked_docs = []
-    for doc in docs:
-        chunks = chunk_text(doc["text"])
-        for i, chunk in enumerate(chunks):
-            print(f"Processing chunk {i} of {doc['url']} ...")
-            semantic = extract_semantic_metadata(chunk)
-            
-            # Skip chunks whose topics include "cookies" (case-insensitive)
-            if any(topic.lower() == "cookies" for topic in semantic.get("topics", [])):
-                print(f"Skipping chunk {i} of {doc['url']} (topic contains 'cookies')")
-                continue
-            
-            chunked_docs.append({
-                "url": doc["url"],
-                "chunk_id": i,
-                "content": chunk,
-                "summary": semantic.get("summary", ""),
-                "topics": semantic.get("topics", [])
-            })
+        with open(json_path, "r", encoding="utf-8") as f:
+            docs = json.load(f)
 
-    print(f"Saving chunked docs with metadata to {output_file} ...")
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(chunked_docs, f, ensure_ascii=False, indent=2)
+        chunked_docs = []
+        seen_fingerprints = set()  # For deduplication
 
-    print("Done!")
+        for doc in docs:
+            text = simple_clean(doc["text"])
+            chunks = chunk_text(text)
+
+            for i, chunk in enumerate(chunks):
+                fingerprint = chunk_fingerprint(chunk)
+
+                # ---------- Deduplication ----------
+                if fingerprint in seen_fingerprints:
+                    continue
+                seen_fingerprints.add(fingerprint)
+
+                semantic = extract_semantic_metadata(chunk)
+
+                # Skip cookie boilerplate chunks
+                if any(t.lower() == "cookies" for t in semantic.get("topics", [])):
+                    continue
+
+                chunked_docs.append({
+                    "url": doc["url"],
+                    "chunk_id": i,
+                    "fingerprint": fingerprint,
+                    "content": chunk,
+                    "summary": semantic.get("summary", ""),
+                    "topics": semantic.get("topics", [])
+                })
+
+        out_path = output_dir / json_path.name
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(chunked_docs, f, ensure_ascii=False, indent=2)
+
+        print(f"Saved → {out_path} ({len(chunked_docs)} unique chunks)")
+
+    print("\nAll files processed")
 
 
 if __name__ == "__main__":
