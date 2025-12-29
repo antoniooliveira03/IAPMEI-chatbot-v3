@@ -14,33 +14,27 @@ chunk_dir = Path("data/03_chunked")
 vector_dir = Path("data/04_vectorized")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
-
-# Vectorize
-def embedding(text: str):
-
-    embedding_model = client.embeddings.create(
-        model = "text-embedding-3-small",
-        input = text
+# ---------- Embedding ----------
+def embedding(text: str) -> np.ndarray:
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
     )
+    return np.array(response.data[0].embedding, dtype=np.float32)
 
-    vector = np.array(embedding_model.data[0].embedding, dtype=np.float32)
-
-    return vector
-
-# VDb
-def db(json_file: Path):
-
+# ---------- FAISS DB ----------
+def build_db(chunk_dir: Path):
     metadata = []
     index = None
 
-    for json_file in chunk_dir.iterdir():
+    for json_path in chunk_dir.glob("*.json"):
+        source_file = json_path.stem
 
-        with open(json_file, "r", encoding="utf-8") as f:
+        with open(json_path, "r", encoding="utf-8") as f:
             chunks = json.load(f)
 
-
         for chunk in chunks:
-            vec = embedding(chunk["text"])
+            vec = embedding(chunk["content"])
 
             if index is None:
                 index = faiss.IndexFlatL2(len(vec))
@@ -48,25 +42,26 @@ def db(json_file: Path):
             index.add(vec.reshape(1, -1))
 
             metadata.append({
-                "source_file": chunk["source_file"],
+                "source_file": source_file,
+                "url": chunk["url"],
                 "chunk_id": chunk["chunk_id"],
-                "text": chunk["text"]
+                "fingerprint": chunk.get("fingerprint"),
+                "content": chunk["content"],
+                "summary": chunk.get("summary", ""),
+                "topics": chunk.get("topics", [])
             })
 
     return index, metadata
 
-# Run
+# ---------- Run ----------
+index, metadata = build_db(chunk_dir)
 
-# Create FAISS index and metadata
-index, metadata = db(chunk_dir)
-# Save FAISS index and metadata
 faiss_index_path = vector_dir / "db.index"
 metadata_path = vector_dir / "db.json"
 
 faiss.write_index(index, str(faiss_index_path))
 
-# Save metadata
 with open(metadata_path, "w", encoding="utf-8") as f:
     json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-print("\n[OK] Single FAISS index saved")
+print("\n[OK] FAISS index and metadata saved")
