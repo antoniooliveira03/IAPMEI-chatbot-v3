@@ -35,6 +35,9 @@ def build_db(chunk_dir: Path):
 
         for chunk in chunks:
             vec = embedding(chunk["content"])
+            combined_text = " ".join(chunk.get("topics", []) + [chunk.get("summary", ""), chunk["content"]])
+
+            chunk_vec = embedding(combined_text)
 
             if index is None:
                 index = faiss.IndexFlatL2(len(vec))
@@ -48,7 +51,8 @@ def build_db(chunk_dir: Path):
                 "fingerprint": chunk.get("fingerprint"),
                 "content": chunk["content"],
                 "summary": chunk.get("summary", ""),
-                "topics": chunk.get("topics", [])
+                "topics": chunk.get("topics", []),
+                "chunk_vector": chunk_vec.tolist()
             })
 
     return index, metadata
