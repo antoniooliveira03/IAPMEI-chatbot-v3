@@ -13,9 +13,9 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    start_urls = ["https://portugal2030.pt/"]
+    start_urls = ["https://eur-lex.europa.eu/PT/legal-content/summary/financial-support-for-border-management-and-visa-policy.html"]
 
-    allowed_domains = ["portugal2030.pt", "www.portugal2030.pt",]
+    allowed_domains = ["eur-lex.europa.eu", "www.eur-lex.europa.eu"]
 
 
     # ---------- Helpers ----------
@@ -110,6 +110,9 @@ class Portugal2030Spider(scrapy.Spider):
 
             for link in link_extractor.extract_links(fake_response):
                 if any(x in link.url.lower() for x in ["login", "cookies", "privacy", "termos"]):
+                    continue
+
+                if "/pt/" not in link.url.lower():
                     continue
 
                 yield response.follow(
