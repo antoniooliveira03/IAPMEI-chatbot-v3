@@ -1,42 +1,12 @@
 import re
 import json
 from pathlib import Path
+import fasttext
+from file_patterns import FILE_PATTERNS, BOILERPLATE_FTJ, BOILERPLATE_FAMI_IGFV
 
-# =========================
-# Boilerplate patterns
-# =========================
+FASTTEXT_MODEL = fasttext.load_model("models/lid.176.bin")
 
-FILE_PATTERNS = {
-    "compete2030": [
-        r"Saltar para o conteúdo principal.*?Início",
-        r"Esta página foi útil para si\?.*?A carregar",
-        r"© COMPETE 2030.*$"
-    ],
-    "centro2030": [
-        r"Programas do Portugal 2030.*?Avisos de concurso",
-        r"© 2023 Centro 2030.*$"
-    ],
-    "alentejo_portugal2030": [
-        r"Programas do Portugal 2030.*?Regras de Comunicação",
-        r"Este site utiliza cookies.*$"
-    ],
-    "algarve_portugal2030": [
-        r"Programas do Portugal 2030.*?Área Reservada",
-        r"Este site utiliza cookies.*$"
-    ],
-    "lisboa_portugal2030": [
-        r"Programas do Portugal 2030.*?Plano Anual de Avisos",
-        r"Este site utiliza cookies.*$"
-    ],
-    "norte2030": [
-        r"Ir para o conteúdo principal.*?Pesquisar",
-        r"© 2024 NORTE 2030.*$"
-    ],
-    "portugal2030": [
-        r"Saltar para o conteúdo principal.*?Plano Anual de Avisos",
-        r"Este site utiliza cookies.*$"
-    ]
-}
+
 
 # =========================
 # Cleaning functions
@@ -75,10 +45,64 @@ def clean_text_with_boilerplate(text: str, file_stem: str) -> str:
             flags=re.DOTALL | re.IGNORECASE
         )
 
+    if file_stem == "FTJ":
+        cleaned = cleaned.replace(BOILERPLATE_FTJ, "")
+
+    if file_stem == "FAMI" or file_stem == "IGFV":
+        cleaned = cleaned.replace(BOILERPLATE_FAMI_IGFV,"")
+
+        cleaned = re.sub(r"Skip.*?Display", "", text, flags=re.DOTALL | re.IGNORECASE)
+
+
     # Step 3: final normalization
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
 
     return cleaned
+
+def keep_only_portuguese_paragraphs_fasttext(
+    text: str,
+    min_words: int = 30,
+    min_pt_ratio: float = 0.6,
+    min_confidence: float = 0.75
+) -> str:
+    """
+    Keeps Portuguese paragraphs using FastText.
+    Designed for legal / institutional text (EUR-Lex).
+    """
+    if not text:
+        return ""
+
+    # Split by paragraph or strong separators
+    paragraphs = re.split(r'\n{2,}|(?<=:) ', text)
+
+    pt_paragraphs = []
+    valid = 0
+
+    for p in paragraphs:
+        p = p.strip()
+        if len(p.split()) < min_words:
+            continue
+
+        labels, probs = FASTTEXT_MODEL.predict(
+            p.replace("\n", " "),
+            k=1
+        )
+
+        lang = labels[0].replace("__label__", "")
+        confidence = probs[0]
+
+        valid += 1
+        if lang == "pt" and confidence >= min_confidence:
+            pt_paragraphs.append(p)
+
+    if valid == 0:
+        return ""
+
+    if len(pt_paragraphs) / valid < min_pt_ratio:
+        return ""
+
+    return "\n\n".join(pt_paragraphs)
+
 
 # =========================
 # Main pipeline
@@ -91,31 +115,38 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for json_file in SCRAPED_DIR.glob("*.json"):
-        file_stem = json_file.stem  # e.g. "algarve_portugal2030"
+        file_stem = json_file.stem
         print(f"Cleaning: {json_file.name}")
 
         with open(json_file, "r", encoding="utf-8") as f:
             records = json.load(f)
 
-        # Clean each page
+        cleaned_records = []
+
         for record in records:
-            record["text"] = clean_text_with_boilerplate(
+            # 1️Boilerplate + base cleaning
+            cleaned = clean_text_with_boilerplate(
                 record.get("text", ""),
                 file_stem
             )
 
-        # Drop empty / very small pages
-        records = [
-            r for r in records
-            if len(r.get("text", "").split()) >= 50
-        ]
+            # Keep only PT sentences (FastText)
+            pt_only = keep_only_portuguese_paragraphs_fasttext(cleaned)
+
+            # Drop empty / very small pages
+            if len(pt_only.split()) < 50:
+                continue
+
+            record["text"] = pt_only
+            cleaned_records.append(record)
 
         # Save cleaned file
         out_path = OUTPUT_DIR / json_file.name
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(records, f, ensure_ascii=False, indent=2)
+            json.dump(cleaned_records, f, ensure_ascii=False, indent=2)
 
     print("Cleaning pipeline finished successfully.")
+
 
 # =========================
 # Entry point

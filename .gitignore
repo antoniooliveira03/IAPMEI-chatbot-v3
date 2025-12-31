@@ -1,6 +1,7 @@
 /env
 /data
 /guidelines
+/models
 
 
 .env
