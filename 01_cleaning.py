@@ -17,12 +17,19 @@ def base_clean_text(text: str) -> str:
     if not text:
         return ""
 
+    # Remove sequences of 3 or more dots
     text = re.sub(r'\.{3,}', ' ', text)
+    # Normalize line breaks and spaces
     text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Remove spaces around line breaks
     text = re.sub(r'[ \t]*\n[ \t]*', '\n', text)
+    # Reduce multiple line breaks to max two
     text = re.sub(r'\n{3,}', '\n\n', text)
+    # Fix line breaks within paragraphs
     text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+    # Normalize spaces and punctuation
     text = re.sub(r'[ \t]+', ' ', text)
+    # Remove space before punctuation marks
     text = re.sub(r'\s+([.,;:!?])', r'\1', text)
 
     return text.strip()

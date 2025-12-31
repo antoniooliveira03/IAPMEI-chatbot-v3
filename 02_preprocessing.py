@@ -35,6 +35,7 @@ def load_jsons(json_dir: str) -> List[Dict]:
     return docs
 
 def simple_clean(text: str) -> str:
+    # Basic cleaning: collapse whitespace
     return re.sub(r"\s+", " ", text).strip()
 
 def chunk_text(text: str) -> List[str]:
