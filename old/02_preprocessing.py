@@ -42,11 +42,9 @@ def chunk_text(text: str) -> List[str]:
     return splitter.split_text(text)
 
 def chunk_fingerprint(text: str) -> str:
-    """
-    Create a stable fingerprint for a chunk.
-    """
-    normalized = re.sub(r"\s+", " ", text.lower()).strip()
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return hashlib.md5(
+        re.sub(r"\s+", " ", text.lower()).encode("utf-8")).hexdigest()
+
 
 
 # ---------------- Semantic Metadata ----------------
@@ -57,7 +55,7 @@ class SemanticMetadata(BaseModel):
 
 SEMANTIC_PROMPT = """
 You are analyzing a web document.
-Return ONLY a strict JSON object with keys "summary" and "topics".
+Return ONLY a strict JSON object with keys "summary" and "topics" written in Portuguese language.
 Do not include any other text.
 
 Text:
@@ -98,7 +96,8 @@ def main():
             docs = json.load(f)
 
         chunked_docs = []
-        seen_fingerprints = set()  # For deduplication
+        # For chunk deduplication 
+        seen_fingerprints = {}  
 
         for doc in docs:
             text = simple_clean(doc["text"])
@@ -109,8 +108,18 @@ def main():
 
                 # ---------- Deduplication ----------
                 if fingerprint in seen_fingerprints:
+                    first = seen_fingerprints[fingerprint]
+
+                    print("\n[DUPLICATE CHUNK DETECTED]")
+                    print(f"First seen in: {first['url']} (chunk {first['chunk_id']})")
+                    print(f"Duplicate in:  {doc['url']} (chunk {i})")
                     continue
-                seen_fingerprints.add(fingerprint)
+
+                seen_fingerprints[fingerprint] = {
+                        "url": doc["url"],
+                        "chunk_id": i,
+                        "preview": chunk[:200]
+                    }
 
                 semantic = extract_semantic_metadata(chunk)
 
