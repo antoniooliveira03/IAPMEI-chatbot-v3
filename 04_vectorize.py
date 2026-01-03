@@ -10,8 +10,8 @@ load_dotenv()
 client = OpenAI()
 
 # Directories
-chunk_dir = Path("data/03_chunked")
-vector_dir = Path("data/04_vectorized")
+chunk_dir = Path("data/04_metadata")
+vector_dir = Path("data/05_vectorized")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------- Embedding ----------

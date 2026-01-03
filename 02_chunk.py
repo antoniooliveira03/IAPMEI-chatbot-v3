@@ -37,7 +37,7 @@ def main():
         with open(json_path, "r", encoding="utf-8") as f:
             docs = json.load(f)
 
-        seen_fingerprints = set()
+        seen_fingerprints = {}   # fingerprint → first occurrence
         unique_chunks = []
 
         for doc in docs:
@@ -48,9 +48,18 @@ def main():
                 fingerprint = chunk_fingerprint(chunk)
 
                 if fingerprint in seen_fingerprints:
+                    first = seen_fingerprints[fingerprint]
+
+                    print("\n[DUPLICATE CHUNK]")
+                    print(f"First seen in: {first['url']} (chunk {first['chunk_id']})")
+                    print(f"Duplicate in:  {doc['url']} (chunk {i})")
                     continue
 
-                seen_fingerprints.add(fingerprint)
+                # first time seeing this chunk
+                seen_fingerprints[fingerprint] = {
+                    "url": doc["url"],
+                    "chunk_id": i
+                }
 
                 unique_chunks.append({
                     "url": doc["url"],
@@ -63,7 +72,7 @@ def main():
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(unique_chunks, f, ensure_ascii=False, indent=2)
 
-        print(f"Saved → {out_path} ({len(unique_chunks)} unique chunks)")
+        print(f"\nSaved → {out_path} ({len(unique_chunks)} unique chunks)")
 
     print("\n[PHASE 1 COMPLETE]")
 
