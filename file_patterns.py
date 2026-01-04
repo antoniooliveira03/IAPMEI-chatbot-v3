@@ -106,3 +106,10 @@ BOILERPLATE_FAMI_IGFV = (
     "European Personnel Selection Office Publications Office of the European Union Agencies "
     "Switch to mobile Switch to desktop"
 )
+
+FORBIDDEN_TOPICS = {
+    "cookies",
+    "termos e condições",
+    "política de privacidade",
+    "ligações úteis"
+}

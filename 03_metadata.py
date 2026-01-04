@@ -3,12 +3,20 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
+from file_patterns import FORBIDDEN_TOPICS
 
 load_dotenv()
+
 
 # ---------------- Setup ----------------
 
 client = OpenAI()
+
+
+# ---------------- Helpers ----------------
+def should_skip_chunk(topics: list[str]) -> bool:
+    normalized = {t.strip().lower() for t in topics}
+    return not normalized.isdisjoint(FORBIDDEN_TOPICS)
 
 # ---------------- Semantic Model ----------------
 
@@ -19,6 +27,8 @@ class SemanticMetadata(BaseModel):
 SEMANTIC_PROMPT = """
 You are analyzing a web document.
 Return ONLY a strict JSON object with keys "summary" and "topics" written in Portuguese.
+- "summary": A concise one-sentence summary of the document.
+- "topics": A list of up to 5 relevant keywords or topics from the document.
 Do not include any other text.
 
 Text:
@@ -58,7 +68,7 @@ def main():
             semantic = extract_semantic_metadata(chunk["content"])
 
             # Skip cookie boilerplate
-            if any(t.lower() == "cookies" for t in semantic.get("topics", [])):
+            if should_skip_chunk(semantic.get("topics", [])):
                 continue
 
             enriched_chunks.append({
