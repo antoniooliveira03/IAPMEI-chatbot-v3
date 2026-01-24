@@ -13,6 +13,21 @@ splitter = RecursiveCharacterTextSplitter(
 )
 
 # ---------------- Helpers ----------------
+def get_chunk_source(doc: dict, file_name: str):
+    # Scraped page
+    if "text" in doc and "url" in doc:
+        return doc["text"], doc["url"], True  # chunkable=True
+
+    # Q&A style
+    if "Q" in doc and "A" in doc:
+        text = f"Q: {doc['Q']}\n\nA: {doc['A']}"
+        url = f"qa://{file_name}#{hash(doc['Q'])}"
+        return text, url, False  # chunkable=False
+
+    # Unknown → skip safely
+    return None, None, None
+
+
 
 def simple_clean(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
@@ -41,33 +56,55 @@ def main():
         unique_chunks = []
 
         for doc in docs:
-            text = simple_clean(doc["text"])
-            chunks = chunk_text(text)
+            text, source_url, chunkable = get_chunk_source(doc, json_path.name)
 
-            for i, chunk in enumerate(chunks):
-                fingerprint = chunk_fingerprint(chunk)
+            if not text:
+                continue
 
+            text = simple_clean(text)
+
+            # ----------------------
+            # Chunkable content (web pages)
+            # ----------------------
+            if chunkable:
+                chunks = chunk_text(text)
+                for i, chunk in enumerate(chunks):
+                    fingerprint = chunk_fingerprint(chunk)
+
+                    if fingerprint in seen_fingerprints:
+                        first = seen_fingerprints[fingerprint]
+                        print("\n[DUPLICATE CHUNK]")
+                        print(f"First seen in: {first['url']} (chunk {first['chunk_id']})")
+                        print(f"Duplicate in:  {source_url} (chunk {i})")
+                        continue
+
+                    seen_fingerprints[fingerprint] = {"url": source_url, "chunk_id": i}
+
+                    unique_chunks.append({
+                        "url": source_url,
+                        "chunk_id": i,
+                        "fingerprint": fingerprint,
+                        "content": chunk
+                    })
+
+            # ----------------------
+            # Non-chunkable content (Q&A)
+            # ----------------------
+            else:
+                fingerprint = chunk_fingerprint(text)
                 if fingerprint in seen_fingerprints:
-                    first = seen_fingerprints[fingerprint]
-
-                    print("\n[DUPLICATE CHUNK]")
-                    print(f"First seen in: {first['url']} (chunk {first['chunk_id']})")
-                    print(f"Duplicate in:  {doc['url']} (chunk {i})")
                     continue
 
-                # first time seeing this chunk
-                seen_fingerprints[fingerprint] = {
-                    "url": doc["url"],
-                    "chunk_id": i
-                }
+                seen_fingerprints[fingerprint] = {"url": source_url, "chunk_id": 0}
 
                 unique_chunks.append({
-                    "url": doc["url"],
-                    "chunk_id": i,
+                    "url": source_url,
+                    "chunk_id": 0,
                     "fingerprint": fingerprint,
-                    "content": chunk
+                    "content": text
                 })
 
+        # 🔹 Save AFTER all docs are processed
         out_path = output_dir / json_path.name
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(unique_chunks, f, ensure_ascii=False, indent=2)
@@ -75,6 +112,7 @@ def main():
         print(f"\nSaved → {out_path} ({len(unique_chunks)} unique chunks)")
 
     print("\n[PHASE 1 COMPLETE]")
+
 
 if __name__ == "__main__":
     main()

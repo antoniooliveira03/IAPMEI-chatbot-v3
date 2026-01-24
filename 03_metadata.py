@@ -27,7 +27,7 @@ class SemanticMetadata(BaseModel):
 SEMANTIC_PROMPT = """
 You are analyzing a web document.
 Return ONLY a strict JSON object with keys "summary" and "topics" written in Portuguese.
-- "summary": A concise one-sentence summary of the document.
+- "summary": A concise one-sentence summary of the document. It must be shorter than the original text.
 - "topics": A list of up to 5 relevant keywords or topics from the document.
 Do not include any other text.
 

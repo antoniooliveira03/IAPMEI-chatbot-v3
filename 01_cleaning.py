@@ -111,6 +111,11 @@ def keep_only_portuguese_paragraphs_fasttext(
     return "\n\n".join(pt_paragraphs)
 
 
+def is_scraped_page(record: dict) -> bool:
+    required_keys = {"url", "type", "depth", "text"}
+    return required_keys.issubset(record.keys())
+
+
 # =========================
 # Main pipeline
 # =========================
@@ -122,6 +127,7 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for json_file in SCRAPED_DIR.glob("*.json"):
+
         file_stem = json_file.stem
         print(f"Cleaning: {json_file.name}")
 
@@ -131,7 +137,10 @@ def main():
         cleaned_records = []
 
         for record in records:
-            # 1️Boilerplate + base cleaning
+            if not is_scraped_page(record):
+                cleaned_records.append(record)
+                continue
+            # Boilerplate + base cleaning
             cleaned = clean_text_with_boilerplate(
                 record.get("text", ""),
                 file_stem
