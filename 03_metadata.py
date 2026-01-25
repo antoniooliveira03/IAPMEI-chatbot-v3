@@ -57,6 +57,14 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for json_path in input_dir.glob("*.json"):
+
+        out_path = output_dir / json_path.name
+
+        # Skip if already processed
+        if out_path.exists():
+            print(f"[SKIP] Already exists: {out_path.name}")
+            continue
+    
         print(f"\n[PHASE 2] Enriching: {json_path.name}")
 
         with open(json_path, "r", encoding="utf-8") as f:
