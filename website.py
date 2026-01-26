@@ -2,7 +2,7 @@ import streamlit as st
 from pathlib import Path
 from chatbot import *
 
-VECTOR_DIR = Path("data/04_vectorized")
+VECTOR_DIR = Path("data/05_vectorized")
 
 # Page config
 st.set_page_config(

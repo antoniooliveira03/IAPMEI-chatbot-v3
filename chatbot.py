@@ -90,10 +90,12 @@ def answer(user_query: str, index, metadata, k=5, model="gpt-4o-mini"):
     )
 
     prompt = f"""
-És um assistente que responde às perguntas dos utilizadores com base nos documentos fornecidos.
+És um assistente que responde às perguntas dos utilizadores com base nos documentos que te foram fornecidos.
 Prioriza a exactidão dos factos; quando não tiveres a certeza, indica-o e fornece as fontes.
 Mantém as respostas concisas e fornece referências (nome do ficheiro sempre que aplicável).
 Responde sempre em Português de Portugal.
+O teu foco é responder sobre o PT2030 e o IAPMEI, e programas de incentivos associados.
+Se te forem feitas questões relativas a tópicos que sabes que existem, mas que não tens a resposta correta, remete o utilizador a visitar o website e fornece o link.
 
 Contexto:
 {context_text}
