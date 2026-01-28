@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import fasttext
 from file_patterns import FILE_PATTERNS, BOILERPLATE_FTJ, BOILERPLATE_FAMI_IGFV
+import argparse
 
 FASTTEXT_MODEL = fasttext.load_model("models/lid.176.bin")
 
@@ -116,17 +117,55 @@ def is_scraped_page(record: dict) -> bool:
     return required_keys.issubset(record.keys())
 
 
+def resolve_input_files(scraped_dir: Path, selected_files: list[str]):
+    if not selected_files:
+        return list(scraped_dir.glob("*.json"))
+
+    all_files = list(scraped_dir.glob("*.json"))
+    resolved = []
+
+    for selector in selected_files:
+        # Exact stem match first
+        exact = [
+            f for f in all_files
+            if f.stem.lower() == selector.lower()
+        ]
+
+        if exact:
+            resolved.extend(exact)
+            continue
+
+        # Substring match fallback
+        partial = [
+            f for f in all_files
+            if selector.lower() in f.stem.lower()
+        ]
+
+        if not partial:
+            raise FileNotFoundError(
+                f"No files match selector: '{selector}'"
+            )
+
+        resolved.extend(partial)
+
+    # De-duplicate while preserving order
+    return list(dict.fromkeys(resolved))
+
+
+
 # =========================
 # Main pipeline
 # =========================
 
-def main():
+def main(selected_files: list[str] | None = None):
     SCRAPED_DIR = Path("data/01_extracted")
     OUTPUT_DIR = Path("data/02_clean")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    for json_file in SCRAPED_DIR.glob("*.json"):
+    json_files = resolve_input_files(SCRAPED_DIR, selected_files or [])
+
+    for json_file in json_files:
 
         file_stem = json_file.stem
         print(f"Cleaning: {json_file.name}")
@@ -169,4 +208,16 @@ def main():
 # =========================
 
 if __name__ == "__main__":
-    main()
+
+    print("Starting cleaning pipeline...")
+    parser = argparse.ArgumentParser(
+    description="Clean scraped JSON files"
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="Optional JSON filenames or stems to process (e.g. FTJ or FTJ.json)"
+    )
+
+    args = parser.parse_args()
+    main(args.files)
