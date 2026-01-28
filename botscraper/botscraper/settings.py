@@ -86,7 +86,7 @@ HTTPCACHE_DIR = "httpcache"
 # Set settings whose default value is deprecated to a future-proof value
 FEED_EXPORT_ENCODING = "utf-8"
 
-NAME = "alentejo2030"
+NAME = "algarve2030"
 
 FEEDS = {
     f"/Users/antoniooliveira/Documents/GitHub/IAPMEI-chatbot-v3/data/01_extracted/{NAME}.json": {"format": "json", "overwrite": True}}
