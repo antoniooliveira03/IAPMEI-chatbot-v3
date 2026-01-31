@@ -3,13 +3,13 @@
 # =========================
 
 FILE_PATTERNS = {
-    "compete2030_v2": [
+    "compete2030": [
         r"Saltar para o conteúdo principal da página.*?Modo claro",
         r"Saltar para o conteúdo principal.*?Início",
         r"Esta página foi útil para si\?.*?A carregar",
         r"© COMPETE 2030.*$"
     ],
-    "centro2030_v2": [
+    "centro2030": [
         r"Programas do Portugal 2030\s+PESSOAS 2030.*?Antifraude",
         r"Programas do Portugal 2030.*?Avisos de concurso",
         r"© 2023 Centro 2030.*$"
@@ -27,15 +27,15 @@ FILE_PATTERNS = {
         r"Programas do Portugal 2030.*?Plano Anual de Avisos",
         r"Este site utiliza cookies.*$"
     ],
-    "norte2030_v2": [
+    "norte2030": [
         r"Ir para o conteúdo principal.*?Pesquisar",
         r"© 2024 NORTE 2030.*$"
     ],
-    "portugal2030_v2": [
+    "portugal2030": [
         r"Saltar para o conteúdo principal.*?Plano Anual de Avisos",
         r"Este site utiliza cookies.*$"
     ],
-    "iapmei_website_v2": [
+    "iapmei": [
         r"Este sítio utiliza cookies de terceiros.*?Recebera uma password nova no seu email de registo\.\s*E-mail"
     ]
 }

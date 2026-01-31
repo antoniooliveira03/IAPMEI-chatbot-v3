@@ -12,9 +12,10 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    start_urls = ["https://centro2030.pt/"]
+    start_urls = ["https://www.iapmei.pt/"]
 
-    allowed_domains = ["centro2030.pt", "www.centro2030.pt"]
+    allowed_domains = ["iapmei.pt", "www.iapmei.pt"]
+
     # ---------- Helpers ----------
 
     def errback_log(self, failure):
@@ -78,7 +79,8 @@ class Portugal2030Spider(scrapy.Spider):
                 # Skip unwanted links
                 if any(x in link.url.lower() for x in ["login", "cookies", "privacy", "termos", "arquivo", 
                                                        "ligacoes-uteis", "politica-de", "legislacao", 
-                                                       "aviso-2024", "2023", "operacao"]):
+                                                       "aviso-2024", "2023", "operacao", "regulamentacao",
+                                                       "operacoes", "pt/en/", "REACH"]):
                     continue
 
                 yield response.follow(
