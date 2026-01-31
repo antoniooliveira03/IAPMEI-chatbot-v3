@@ -14,3 +14,8 @@ File Structure
 - file_patterns - contains text patterns to be removed from the text (helper file used in 01_cleaning)
 - Text Stats - compares basic statistics before and after cleaning techniques are applied to the extracted files
 - Evaluation - evaluates the chatbot's performance
+
+
+Run scraper:
+cd botscraper
+scrapy crawl botscraper

@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
 from file_patterns import FORBIDDEN_TOPICS
+import argparse
 
 load_dotenv()
 
@@ -51,13 +52,40 @@ def extract_semantic_metadata(text: str) -> dict:
 
 # ---------------- Phase 2 ----------------
 
-def main():
+def resolve_input_files(input_dir: Path, selected_files: list[str] | None):
+    all_files = list(input_dir.glob("*.json"))
+
+    if not selected_files:
+        return all_files
+
+    resolved = []
+    for selector in selected_files:
+        # Exact stem match
+        exact = [f for f in all_files if f.stem.lower() == selector.lower()]
+        if exact:
+            resolved.extend(exact)
+            continue
+
+        # Partial match fallback
+        partial = [f for f in all_files if selector.lower() in f.stem.lower()]
+        if partial:
+            resolved.extend(partial)
+            continue
+
+        raise FileNotFoundError(f"No files match selector: '{selector}'")
+
+    # Remove duplicates while preserving order
+    return list(dict.fromkeys(resolved))
+
+
+def main(selected_files: list[str] | None = None):
     input_dir = Path("data/03_chunked")
     output_dir = Path("data/04_metadata")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for json_path in input_dir.glob("*.json"):
+    json_files = resolve_input_files(input_dir, selected_files)
 
+    for json_path in json_files:
         out_path = output_dir / json_path.name
 
         # Skip if already processed
@@ -75,7 +103,7 @@ def main():
         for chunk in chunks:
             semantic = extract_semantic_metadata(chunk["content"])
 
-            # Skip cookie boilerplate
+            # Skip forbidden topics
             if should_skip_chunk(semantic.get("topics", [])):
                 continue
 
@@ -85,7 +113,6 @@ def main():
                 "topics": semantic["topics"]
             })
 
-        out_path = output_dir / json_path.name
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(enriched_chunks, f, ensure_ascii=False, indent=2)
 
@@ -93,5 +120,15 @@ def main():
 
     print("\n[PHASE 2 COMPLETE]")
 
+
+# ---------------- Entry Point ----------------
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Enrich chunks with semantic metadata")
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="Optional JSON filenames or stems to process (e.g., FTJ or FTJ.json)"
+    )
+    args = parser.parse_args()
+    main(args.files)

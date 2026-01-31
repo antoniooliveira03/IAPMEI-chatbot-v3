@@ -27,6 +27,11 @@ def build_db(chunk_dir: Path):
     metadata = []
     index = None
 
+    dim = 1536
+
+    index = faiss.IndexFlatIP(dim) 
+    print(f"[INFO] FAISS index initialized with dim={dim}")
+
     for json_path in chunk_dir.glob("*.json"):
         source_file = json_path.stem
 
@@ -34,13 +39,9 @@ def build_db(chunk_dir: Path):
             chunks = json.load(f)
 
         for chunk in chunks:
-            vec = embedding(chunk["content"])
             combined_text = " ".join(chunk.get("topics", []) + [chunk.get("summary", ""), chunk["content"]])
-
-            chunk_vec = embedding(combined_text)
-
-            if index is None:
-                index = faiss.IndexFlatL2(len(vec))
+            vec = embedding(combined_text)
+            vec = vec / np.linalg.norm(vec)
 
             index.add(vec.reshape(1, -1))
 
@@ -52,7 +53,7 @@ def build_db(chunk_dir: Path):
                 "content": chunk["content"],
                 "summary": chunk.get("summary", ""),
                 "topics": chunk.get("topics", []),
-                "chunk_vector": chunk_vec.tolist()
+                "chunk_vector": vec.tolist()
             })
 
     return index, metadata
