@@ -6,6 +6,9 @@ import faiss
 import json
 from dotenv import load_dotenv
 from sklearn.metrics.pairwise import cosine_similarity
+from rank_bm25 import BM25Okapi
+import re
+
 
 load_dotenv()
 client = OpenAI()
@@ -21,6 +24,9 @@ def embedding(text: str) -> np.ndarray:
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
 
+def embed_query(query: str) -> np.ndarray:
+    return embedding(query)
+
 # ---------------- FAISS Loader ----------------
 def load_faiss_index(vector_dir: Path):
     index_path = vector_dir / "db.index"
@@ -33,58 +39,55 @@ def load_faiss_index(vector_dir: Path):
 
     return index, metadata
 
-# ---------------- Reranking ----------------
-def rerank_by_similarity(query_vec, retrieved_docs):
-    scores = []
-    for doc in retrieved_docs:
-        doc_vec = np.array(doc['chunk_vector']).reshape(1, -1)
-        sim = cosine_similarity(query_vec, doc_vec)[0][0]
-        scores.append(sim)
+# ---------------- BM25 ----------------
+def tokenize(text):
+    return re.findall(r"\w+", text.lower())
 
-    sorted_docs = [
-        doc for _, doc in
-        sorted(zip(scores, retrieved_docs), key=lambda x: x[0], reverse=True)
-    ]
-    return sorted_docs
+def build_bm25(metadata):
+    corpus = [tokenize(doc["content"]) for doc in metadata]
+    bm25 = BM25Okapi(corpus)
+    return bm25
 
 # ---------------- Retrieval ----------------
-def retrieve_context(
-    query: str,
-    index,
-    metadata,
-    k_retrieve=20,
-    k_prompt=5,
-    use_rerank=False
-):
-    """
-    1) Retrieve k_retrieve chunks from FAISS
-    2) Optionally rerank
-    3) Return only top k_prompt chunks for LLM
-    """
+def tokenize(text):
+    return re.findall(r"\w+", text.lower())
 
-    query_vec = embedding(query)
+def build_bm25(metadata):
+    corpus = [tokenize(doc["content"]) for doc in metadata]
+    bm25 = BM25Okapi(corpus)
+    return bm25
 
-    # Retrieve more for better reranking
-    D, I = index.search(query_vec, k_retrieve)
-    retrieved_docs = [metadata[i] for i in I[0]]
 
-    if use_rerank:
-        retrieved_docs = rerank_by_similarity(query_vec, retrieved_docs)
+# ---------------- Hybrid Retrieval ----------------
+def retrieve_hybrid(query, index, metadata, bm25, k=5, weight_dense=0.5, weight_sparse=0.5):
+    # Dense retrieval
+    q_vec = embed_query(query)
+    D, I = index.search(q_vec, k*2)
+    dense_scores = D[0]
+    dense_indices = I[0]
+    dense_scores = (dense_scores - dense_scores.min()) / (dense_scores.max() - dense_scores.min() + 1e-8)
 
-    return retrieved_docs[:k_prompt]
+    # Sparse retrieval
+    tokenized_query = tokenize(query)
+    sparse_scores = bm25.get_scores(tokenized_query)
+    sparse_scores = (sparse_scores - np.min(sparse_scores)) / (np.max(sparse_scores) - np.min(sparse_scores) + 1e-8)
+
+    # Combine scores
+    hybrid_scores = {}
+    for idx, dense_score in zip(dense_indices, dense_scores):
+        hybrid_scores[idx] = weight_dense * dense_score + weight_sparse * sparse_scores[idx]
+
+    ranked_indices = sorted(hybrid_scores.keys(), key=lambda x: hybrid_scores[x], reverse=True)
+    return [metadata[i] for i in ranked_indices[:k]]
+
 
 # ---------------- Chatbot Answer ----------------
 conversation_history = []
 
-def answer(
-    user_query: str,
-    index,
-    metadata,
-    k_retrieve=20,
-    k_prompt=5,
-    model="gpt-4o-mini",
-    use_rerank=False
-):
+def answer(user_query: str, index, 
+           metadata, bm25, k=5, 
+           model="gpt-4o-mini"):
+
     global conversation_history
     max_history = 10
 
@@ -97,15 +100,8 @@ def answer(
     if mod_result.results[0].flagged:
         return "Query flagged by moderation.", []
 
-    # Always retrieve context
-    context_chunks = retrieve_context(
-        user_query,
-        index,
-        metadata,
-        k_retrieve=k_retrieve,
-        k_prompt=k_prompt,
-        use_rerank=use_rerank
-    )
+    # Retrieve context
+    context_chunks = retrieve_hybrid(user_query, index, metadata, bm25, k=k)
 
     context_text = "\n\n".join(
         f"[{c['source_file']}]\nResumo: {c.get('summary','')}\nTexto: {c['content']}"
@@ -113,21 +109,21 @@ def answer(
     )
 
     prompt = f"""
-És um assistente especialista em programas de incentivos a empresas portuguesas, PT2030 e IAPMEI.
-Responde sempre em Português de Portugal.
+        És um assistente especialista em programas de incentivos a empresas portuguesas, PT2030 e IAPMEI.
+        Responde sempre em Português de Portugal.
 
-Regras:
-- Responde de forma clara e concisa.
-- Baseia-te apenas no contexto fornecido.
-- Se a resposta não estiver no contexto, diz que não tens informação suficiente.
-- Sempre que possível, indica a fonte (nome do ficheiro ou link).
+        Regras:
+        - Responde de forma clara e concisa.
+        - Baseia-te apenas no contexto fornecido.
+        - Se não souberes a resposta, informa o utilizador e questiona se podes ajudar em algo mais.
+        - Sempre que possível, indica a fonte (link).
 
-Contexto:
-{context_text}
+        Contexto:
+        {context_text}
 
-Pergunta: {user_query}
-Resposta:
-"""
+        Pergunta: {user_query}
+        Resposta:
+        """
 
     messages = [{"role": "system", "content": prompt}]
     conversation_history = conversation_history[-max_history:]
@@ -151,22 +147,14 @@ Resposta:
 # ---------------- Main Loop ----------------
 def main():
     index, metadata = load_faiss_index(VECTOR_DIR)
+    bm25 = build_bm25(metadata)
 
     while True:
         user_query = input("\nPergunta: ").strip()
-
         if user_query.lower() in ["sair", "exit", "quit"]:
             print("Assistente: Até à próxima!")
             break
-
-        answer(
-            user_query,
-            index,
-            metadata,
-            k_retrieve=20,   # retrieve more
-            k_prompt=5,      # send fewer to LLM
-            use_rerank=True  # toggle on/off
-        )
+        answer(user_query, index, metadata, bm25, k=5)
 
 if __name__ == "__main__":
     main()
