@@ -44,7 +44,7 @@ def tokenize(text):
     return re.findall(r"\w+", text.lower())
 
 def build_bm25(metadata):
-    corpus = [tokenize(doc["content"]) for doc in metadata]
+    corpus = [tokenize(doc["content"] + " " + doc.get("summary","")) for doc in metadata]
     bm25 = BM25Okapi(corpus)
     return bm25
 
@@ -85,7 +85,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=5, weight_dense=0.5, weight_
 conversation_history = []
 
 def answer(user_query: str, index, 
-           metadata, bm25, k=5, 
+           metadata, bm25, k=10, 
            model="gpt-4o-mini"):
 
     global conversation_history
@@ -109,14 +109,14 @@ def answer(user_query: str, index,
     )
 
     prompt = f"""
-        És um assistente especialista em programas de incentivos a empresas portuguesas, PT2030 e IAPMEI.
+        És um assistente especialista em programas de incentivos nacionais e regionais, como o PT2030, Compete2030, Alentejo2030, etc.
         Responde sempre em Português de Portugal.
 
         Regras:
         - Responde de forma clara e concisa.
-        - Baseia-te apenas no contexto fornecido.
-        - Se não souberes a resposta, informa o utilizador e questiona se podes ajudar em algo mais.
-        - Sempre que possível, indica a fonte (link).
+        - Baseia-te no contexto fornecido para responder.
+        - Se não souberes a resposta ou se não houver informação no contexto, informa o utilizador e pergunta se podes ajudar noutro tema.
+        - Sempre que possível, indica a fonte (link ou nome do ficheiro).
 
         Contexto:
         {context_text}
