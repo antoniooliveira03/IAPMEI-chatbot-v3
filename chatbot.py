@@ -6,6 +6,8 @@ import faiss
 import json
 import hashlib
 from dotenv import load_dotenv
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 client = OpenAI()
@@ -38,10 +40,31 @@ def embed_query(query: str) -> np.ndarray:
     return embedding(query)
 
 # ---------------- Retrieval ----------------
-def retrieve_context(query: str, index, metadata, k=5):
+def rerank_by_similarity(query_vec, retrieved_docs):
+    sims = []
+    for doc in retrieved_docs:
+        doc_vec = np.array(doc['chunk_vector']).reshape(1, -1)
+        sim = cosine_similarity(query_vec, doc_vec)[0][0]
+        sims.append(sim)
+    # Sort by similarity only
+    sorted_docs = [doc for _, doc in sorted(zip(sims, retrieved_docs), key=lambda x: x[0], reverse=True)]
+    return sorted_docs
+
+
+def retrieve_context(query: str, index, metadata, k=5, use_rerank=False):
+    """
+    Retrieve top-k chunks from FAISS index.
+    If use_rerank=True, rerank the retrieved chunks by cosine similarity with query embedding.
+    """
     q_vec = embed_query(query)
-    D, I = index.search(q_vec, k)
-    return [metadata[i] for i in I[0]]
+    D, I = index.search(q_vec, k * 2)  
+    retrieved_docs = [metadata[i] for i in I[0]]
+
+    if use_rerank:
+        retrieved_docs = rerank_by_similarity(q_vec, retrieved_docs)
+    
+    return retrieved_docs[:5]  
+
 
 
 # ---------------- Determine if context is needed ----------------
@@ -64,7 +87,7 @@ def needs_context(query: str, model="gpt-4o-mini") -> bool:
 # ---------------- Chatbot Answer ----------------
 conversation_history = []
 
-def answer(user_query: str, index, metadata, k=5, model="gpt-4o-mini"):
+def answer(user_query: str, index, metadata, k=5, model="gpt-4o-mini", use_rerank=False):
     global conversation_history
     max_history = 10
 
@@ -80,7 +103,7 @@ def answer(user_query: str, index, metadata, k=5, model="gpt-4o-mini"):
     context_needed = needs_context(user_query)
 
     context_chunks = (
-        retrieve_context(user_query, index, metadata, k)
+        retrieve_context(user_query, index, metadata, k, use_rerank)
         if context_needed else []
     )
 
@@ -89,20 +112,30 @@ def answer(user_query: str, index, metadata, k=5, model="gpt-4o-mini"):
         for c in context_chunks
     )
 
+
     prompt = f"""
-És um assistente que responde às perguntas dos utilizadores com base nos documentos que te foram fornecidos.
-Prioriza a exactidão dos factos; quando não tiveres a certeza, indica-o e fornece as fontes.
-Mantém as respostas concisas e fornece referências (nome do ficheiro sempre que aplicável).
-Responde sempre em Português de Portugal.
-O teu foco é responder sobre o PT2030 e o IAPMEI, e programas de incentivos associados.
-Se te forem feitas questões relativas a tópicos que sabes que existem, mas que não tens a resposta correta, remete o utilizador a visitar o website e fornece o link.
+        És um assistente especialista em programas de incentivos a empresas portuguesas, PT2030 e IAPMEI.
+        O teu trabalho é responder às perguntas dos utilizadores com base na informação a que tens acesso.
 
-Contexto:
-{context_text}
+        Regras:
+        - Responde sempre de forma concisa e clara.
+        - Prioriza a exatidão dos factos; se não tiveres a resposta certa, indica que não tens informação suficiente e questiona se podes ajudar de outra maneira.
+        - Sempre que possível, fornece a fonte utilizada (nome do ficheiro ou link).
+        - Responde obrigatoriamente em Português de Portugal, com vocabulário formal.
+        - Se a pergunta requer múltiplos passos, pensa passo a passo antes de responder.
+        - Se a pergunta não estiver nos documentos, remete o utilizador ao website oficial com link.
 
-Pergunta: {user_query}
-Resposta:
-"""
+        Exemplo:
+        Pergunta: Quais os programas de incentivo disponíveis para PME em 2024?
+        Resposta: Os programas incluem o Incentivo X (fonte) e o Incentivo Y (fonte).
+
+        Contexto:
+        {context_text}
+
+        Pergunta: {user_query}
+        Resposta:
+        """
+
 
     messages = [{"role": "system", "content": prompt}]
     conversation_history = conversation_history[-max_history:]
