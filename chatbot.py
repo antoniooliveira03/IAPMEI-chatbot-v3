@@ -5,13 +5,14 @@ import numpy as np
 import faiss
 import json
 from dotenv import load_dotenv
+import os
 from sklearn.metrics.pairwise import cosine_similarity
 from rank_bm25 import BM25Okapi
 import re
 
 
-load_dotenv()
-client = OpenAI()
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key)
 
 # Directories
 VECTOR_DIR = Path("data/05_vectorized/large")
