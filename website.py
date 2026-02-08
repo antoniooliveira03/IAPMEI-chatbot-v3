@@ -1,9 +1,6 @@
 import streamlit as st
 from pathlib import Path
 from streamlit_option_menu import option_menu
-import requests
-import faiss
-import json
 
 import login as l
 import history as h
@@ -30,37 +27,16 @@ st.set_page_config(
 
 # ---------------- Load RAG resources ----------------
 
+import os
+st.write("Files in vector dir:", os.listdir(VECTOR_DIR))
+
+
 @st.cache_resource
 def load_resources():
     return load_faiss_index(VECTOR_DIR)
 
-def download_file(url, dest_path, binary=True):
-    if not dest_path.exists():
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        r = requests.get(url)
-        r.raise_for_status()
-        if binary:
-            dest_path.write_bytes(r.content)
-        else:
-            dest_path.write_text(r.text)
-        st.info(f"Downloaded {dest_path.name}")
 
-@st.cache_resource
-def load_faiss_index(vector_dir: Path):
-    index_path = vector_dir / "db.index"
-    meta_path = vector_dir / "db.json"
-
-    # raw GitHub URLs
-    download_file("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/data/05_vectorized/large/db.index", index_path)
-    download_file("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/data/05_vectorized/large/db.json", meta_path, binary=False)
-
-    index = faiss.read_index(str(index_path))
-    with open(meta_path, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-
-    return index, metadata
-
-index, metadata = load_faiss_index(VECTOR_DIR)
+index, metadata = load_resources()
 bm25 = build_bm25(metadata)
 
 # ---------------- Session state ----------------
