@@ -1,5 +1,10 @@
 /env
-/data
+/data/00_summaries
+/data/01_extracted
+/data/02_clean
+/data/03_chunked
+/data/04_metadata
+
 /guidelines
 /models
 /evaluation
