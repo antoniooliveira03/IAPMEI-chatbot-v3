@@ -27,7 +27,7 @@ def build_db(chunk_dir: Path):
     metadata = []
     index = None
 
-    dim = 1536
+    dim = 1536 # 3072 for text-embedding-3-large
 
     index = faiss.IndexFlatIP(dim) 
     print(f"[INFO] FAISS index initialized with dim={dim}")
@@ -39,7 +39,8 @@ def build_db(chunk_dir: Path):
             chunks = json.load(f)
 
         for chunk in chunks:
-            combined_text = " ".join(chunk.get("topics", []) + [chunk.get("summary", ""), chunk["content"]])
+            #combined_text = " ".join(chunk.get("topics", []) + [chunk.get("summary", ""), chunk["content"]])
+            combined_text = chunk["content"]
             vec = embedding(combined_text)
             vec = vec / np.linalg.norm(vec)
 
@@ -51,8 +52,8 @@ def build_db(chunk_dir: Path):
                 "chunk_id": chunk["chunk_id"],
                 "fingerprint": chunk.get("fingerprint"),
                 "content": chunk["content"],
-                "summary": chunk.get("summary", ""),
-                "topics": chunk.get("topics", []),
+              #  "summary": chunk.get("summary", ""),
+              #  "topics": chunk.get("topics", []),
                 "chunk_vector": vec.tolist()
             })
 

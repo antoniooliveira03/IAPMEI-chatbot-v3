@@ -3,6 +3,7 @@ import re
 import hashlib
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from urllib.parse import urlparse
 
 # ---------------- Setup ----------------
 
@@ -27,6 +28,22 @@ def get_chunk_source(doc: dict, file_name: str):
     # Unknown → skip safely
     return None, None, None
 
+
+
+def url_to_title(url: str, max_words=7):
+    parsed = urlparse(url)
+    path = parsed.path  # e.g., /programas/inovacao-e-sustentabilidade
+    domain = parsed.netloc.replace("www.", "")  # fallback if path is empty
+
+    segments = [seg for seg in path.split("/") if seg]  # remove empty
+    if segments:
+        # take last segment and split by "-"
+        title_words = segments[-1].split("-")[:max_words]
+        title = " ".join(title_words).capitalize()
+        return title
+    else:
+        # fallback to domain name
+        return domain if domain else "Página Sem Título"
 
 
 def simple_clean(text: str) -> str:
@@ -84,7 +101,7 @@ def main():
                         "url": source_url,
                         "chunk_id": i,
                         "fingerprint": fingerprint,
-                        "content": chunk
+                        "content": f"Fonte: {url_to_title(source_url)}: {chunk}"
                     })
 
             # ----------------------

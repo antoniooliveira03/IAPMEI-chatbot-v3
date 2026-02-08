@@ -5,8 +5,8 @@ from datetime import datetime
 
 # Function to get the path for user conversation history
 def get_history_path(user_id):
-    os.makedirs("conversations", exist_ok=True)
-    return f"conversations/{user_id}.json"
+    os.makedirs("website", exist_ok=True)
+    return f"website/{user_id}.json"
 
 # Function to load user conversation history
 def load_user_history(user_id):

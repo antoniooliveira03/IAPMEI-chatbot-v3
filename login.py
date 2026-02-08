@@ -3,7 +3,7 @@ import json
 import os
 
 
-USERS_FILE = "users.json"
+USERS_FILE = "website/users.json"
 
 def load_users():
     if os.path.exists(USERS_FILE):
