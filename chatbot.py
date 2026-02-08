@@ -14,12 +14,12 @@ load_dotenv()
 client = OpenAI()
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/2")
+VECTOR_DIR = Path("data/05_vectorized/large")
 
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
@@ -73,6 +73,7 @@ def build_bm25(metadata):
 def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6, weight_sparse=0.4, rerank=False):
     # Dense retrieval
     q_vec = embed_query(query)
+    q_vec = q_vec / np.linalg.norm(q_vec)
     D, I = index.search(q_vec, k*2)
     dense_scores = D[0]
     dense_indices = I[0]
@@ -96,7 +97,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
     if rerank:
         final_chunks = reranker(q_vec, candidates, top_k=top_k)
     else:
-        final_chunks = candidates[:k]
+        final_chunks = candidates[:top_k]
 
     return final_chunks
 
@@ -126,13 +127,13 @@ def answer(user_query: str, index,
 
     # Retrieve context
     context_chunks = retrieve_hybrid(user_query, index, metadata, 
-                                     bm25, k=20,top_k=5, 
-                                     weight_dense=0.6, 
-                                     weight_sparse=0.4, 
-                                     rerank=False)
+                                     bm25, k,top_k, 
+                                     weight_dense, 
+                                     weight_sparse, 
+                                     rerank)
 
     context_text = "\n\n".join(
-        f"[{c['source_file']}]\nResumo: {c.get('summary','')}\nTexto: {c['content']}"
+        f"[{c['source_file']}]\n\nTexto: {c['content']}"
         for c in context_chunks
     )
 

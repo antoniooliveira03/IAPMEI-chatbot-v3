@@ -11,13 +11,13 @@ client = OpenAI()
 
 # Directories
 chunk_dir = Path("data/03_chunked")
-vector_dir = Path("data/05_vectorized")
+vector_dir = Path("data/05_vectorized/large")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------- Embedding ----------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32)
@@ -27,7 +27,7 @@ def build_db(chunk_dir: Path):
     metadata = []
     index = None
 
-    dim = 1536 # 3072 for text-embedding-3-large
+    dim = 3072 # 3072 for text-embedding-3-large, 1536 for small
 
     index = faiss.IndexFlatIP(dim) 
     print(f"[INFO] FAISS index initialized with dim={dim}")
