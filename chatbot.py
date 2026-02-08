@@ -11,8 +11,8 @@ from rank_bm25 import BM25Okapi
 import re
 
 
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key)
+API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=API_KEY)
 
 # Directories
 VECTOR_DIR = Path("data/05_vectorized/large")
