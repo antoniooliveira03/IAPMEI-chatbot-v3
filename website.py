@@ -4,23 +4,23 @@ from streamlit_option_menu import option_menu
 
 import login as l
 import history as h
-from chatbot import load_faiss_index, answer
+from chatbot import load_faiss_index, answer, build_bm25
 
 # ---------------- Config ----------------
 
 SUGGESTED_QUESTIONS = [
-    "Quem pode candidatar-se aos apoios do PT2030?",
-    "Quais são os avisos atualmente abertos?",
-    "Que despesas são consideradas elegíveis?",
+    "O que é o PT2030?",
+    "Qual é o objetivo principal do Programa Algarve 2030?",
+    "Como as empresas podem obter a certificação PME?",
     "Qual é a diferença entre o PT2030, IAPMEI e Compete 2030?",
-    "Como funciona o processo de candidatura passo a passo?",
+    "Como funciona o processo de candidatura a incentivos do PT2030?",
 ]
 
 
-VECTOR_DIR = Path("data/05_vectorized")
+VECTOR_DIR = Path("data/05_vectorized/large")
 
 st.set_page_config(
-    page_title="PT2030 Chatbot| IAPMEI",
+    page_title="PT2030 Chatbot | IAPMEI",
     page_icon="🤖",
     layout="wide"
 )
@@ -32,6 +32,7 @@ def load_resources():
     return load_faiss_index(VECTOR_DIR)
 
 index, metadata = load_resources()
+bm25 = build_bm25(metadata)
 
 # ---------------- Session state ----------------
 
@@ -171,7 +172,7 @@ if st.session_state.selected_tab == "PT2030 Chatbot":
                     user_query,
                     index,
                     metadata,
-                    k=5
+                    bm25
                 )
                 st.markdown(response)
 

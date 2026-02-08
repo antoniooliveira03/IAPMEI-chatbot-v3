@@ -114,7 +114,7 @@ def answer(user_query: str, index,
             rerank=False):
 
     global conversation_history
-    max_history = 10
+    max_history = 20
 
     # Moderation
     mod_result = client.moderations.create(
