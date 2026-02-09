@@ -16,28 +16,34 @@ import json
 import requests
 import streamlit as st
 
-INDEX_URL = "https://www.dropbox.com/scl/fi/ffu5rgtdq0su476mnd22h/db.index?rlkey=d4tkuqs1ws2gbx7rlaawtq0gx&dl=1"
-METADATA_URL = "https://www.dropbox.com/scl/fi/u653grejz4m895tlp8ozs/db.json?rlkey=2q6kq90f1ausuw02aopaaw0d1&dl=1"
+INDEX_URL = "https://www.dropbox.com/scl/fi/ffu5rgtdq0su476mnd22h/db.index?rlkey=d4tkuqs1ws2gbx7rlaawtq0gx&st=y9mwsr4x&dl=1"
+META_URL = "https://www.dropbox.com/scl/fi/u653grejz4m895tlp8ozs/db.json?rlkey=2q6kq90f1ausuw02aopaaw0d1&st=6phfu7km&dl=1"
 
-LOCAL_INDEX = "/tmp/db.index"
-LOCAL_METADATA = "/tmp/db.json"
+INDEX_PATH = "/tmp/db.index"
+META_PATH = "/tmp/db.json"
 
-def download_file(url, local_path):
-    if not os.path.exists(local_path):
-        with st.spinner(f"Downloading {os.path.basename(local_path)}..."):
-            r = requests.get(url, stream=True)
-            with open(local_path, "wb") as f:
+
+def download_file(url, path):
+    if not os.path.exists(path):
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
 
-download_file(INDEX_URL, LOCAL_INDEX)
-download_file(METADATA_URL, LOCAL_METADATA)
 
 @st.cache_resource
 def load_resources():
-    index = faiss.read_index(LOCAL_INDEX)
-    with open(LOCAL_METADATA, "r", encoding="utf-8") as f:
+    # download only once
+    download_file(INDEX_URL, INDEX_PATH)
+    download_file(META_URL, META_PATH)
+
+    # load index
+    index = faiss.read_index(INDEX_PATH)
+
+    with open(META_PATH, "r", encoding="utf-8") as f:
         metadata = json.load(f)
+
     return index, metadata
 
 index, metadata = load_resources()
