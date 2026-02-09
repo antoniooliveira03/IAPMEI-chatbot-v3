@@ -1,12 +1,52 @@
 import streamlit as st
 from pathlib import Path
 from streamlit_option_menu import option_menu
+import faiss
+import requests
+import os
+import json
 
 import login as l
 import history as h
 from chatbot import load_faiss_index, answer, build_bm25
 
-# ---------------- Config ----------------
+import os
+import faiss
+import json
+import requests
+import streamlit as st
+
+INDEX_URL = "https://www.dropbox.com/scl/fi/ffu5rgtdq0su476mnd22h/db.index?rlkey=d4tkuqs1ws2gbx7rlaawtq0gx&dl=1"
+METADATA_URL = "https://www.dropbox.com/scl/fi/u653grejz4m895tlp8ozs/db.json?rlkey=2q6kq90f1ausuw02aopaaw0d1&dl=1"
+
+LOCAL_INDEX = "/tmp/db.index"
+LOCAL_METADATA = "/tmp/db.json"
+
+def download_file(url, local_path):
+    if not os.path.exists(local_path):
+        with st.spinner(f"Downloading {os.path.basename(local_path)}..."):
+            r = requests.get(url, stream=True)
+            with open(local_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+download_file(INDEX_URL, LOCAL_INDEX)
+download_file(METADATA_URL, LOCAL_METADATA)
+
+@st.cache_resource
+def load_resources():
+    index = faiss.read_index(LOCAL_INDEX)
+    with open(LOCAL_METADATA, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+    return index, metadata
+
+index, metadata = load_resources()
+bm25 = build_bm25(metadata)
+
+st.success("FAISS index and metadata loaded successfully!")
+
+# ---------------- Streamlit App ----------------
+
 
 SUGGESTED_QUESTIONS = [
     "O que é o PT2030?",
@@ -16,28 +56,12 @@ SUGGESTED_QUESTIONS = [
     "Como funciona o processo de candidatura a incentivos do PT2030?",
 ]
 
-
-VECTOR_DIR = Path("data/05_vectorized/large")
-
 st.set_page_config(
     page_title="PT2030 Chatbot | IAPMEI",
     page_icon="🤖",
     layout="wide"
 )
 
-# ---------------- Load RAG resources ----------------
-
-import os
-st.write("Files in vector dir:", os.listdir(VECTOR_DIR))
-
-
-@st.cache_resource
-def load_resources():
-    return load_faiss_index(VECTOR_DIR)
-
-
-index, metadata = load_resources()
-bm25 = build_bm25(metadata)
 
 # ---------------- Session state ----------------
 
