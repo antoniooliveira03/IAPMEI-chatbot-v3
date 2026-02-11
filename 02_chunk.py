@@ -8,8 +8,8 @@ from urllib.parse import urlparse
 # ---------------- Setup ----------------
 
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=400,
-    chunk_overlap=80,
+    chunk_size=800, #400
+    chunk_overlap=150, #80
     separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
 )
 
@@ -60,7 +60,7 @@ def chunk_fingerprint(text: str) -> str:
 
 def main():
     input_dir = Path("data/02_clean")
-    output_dir = Path("data/03_chunked")
+    output_dir = Path("data/03_chunked/c800_150")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for json_path in input_dir.glob("*.json"):

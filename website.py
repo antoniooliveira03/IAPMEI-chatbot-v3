@@ -1,50 +1,18 @@
 import streamlit as st
 from pathlib import Path
 from streamlit_option_menu import option_menu
-import faiss
-import requests
-import os
-import json
 
 import login as l
 import history as h
 from chatbot import load_faiss_index, answer, build_bm25
 
-import os
-import faiss
-import json
-import requests
-import streamlit as st
-
-INDEX_URL = "https://www.dropbox.com/scl/fi/ffu5rgtdq0su476mnd22h/db.index?rlkey=d4tkuqs1ws2gbx7rlaawtq0gx&st=y9mwsr4x&dl=1"
-META_URL = "https://www.dropbox.com/scl/fi/u653grejz4m895tlp8ozs/db.json?rlkey=2q6kq90f1ausuw02aopaaw0d1&st=6phfu7km&dl=1"
-
-INDEX_PATH = "/tmp/db.index"
-META_PATH = "/tmp/db.json"
 
 
-def download_file(url, path):
-    if not os.path.exists(path):
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
+VECTOR_DIR = Path("data/05_vectorized/large")
 
 @st.cache_resource
 def load_resources():
-    # download only once
-    download_file(INDEX_URL, INDEX_PATH)
-    download_file(META_URL, META_PATH)
-
-    # load index
-    index = faiss.read_index(INDEX_PATH)
-
-    with open(META_PATH, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-
-    return index, metadata
+    return load_faiss_index(VECTOR_DIR)
 
 index, metadata = load_resources()
 bm25 = build_bm25(metadata)

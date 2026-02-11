@@ -15,7 +15,7 @@ load_dotenv()
 client = OpenAI()
 
 # Directories
-# VECTOR_DIR = Path("data/05_vectorized/large")
+VECTOR_DIR = Path("data/05_vectorized/large")
 
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
@@ -29,8 +29,11 @@ def embed_query(query: str) -> np.ndarray:
     return embedding(query)
 
 # ---------------- FAISS Loader ----------------
-def load_faiss_index(index_path: str, meta_path: str):
-    index = faiss.read_index(index_path)
+def load_faiss_index(vector_dir: Path):
+    index_path = vector_dir / "db.index"
+    meta_path = vector_dir / "db.json"
+
+    index = faiss.read_index(str(index_path))
 
     with open(meta_path, "r", encoding="utf-8") as f:
         metadata = json.load(f)
