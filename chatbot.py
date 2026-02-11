@@ -15,7 +15,7 @@ load_dotenv()
 client = OpenAI()
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/large")
+VECTOR_DIR = Path("data/05_vectorized/large/c800_150")
 
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
