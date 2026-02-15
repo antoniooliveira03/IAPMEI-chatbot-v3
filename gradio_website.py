@@ -91,16 +91,19 @@ def new_chat(user_email):
 
 def rename_session(new_title, session_id, user_email):
     if not user_email:
-        return gr.update()
+        return gr.update(), ""  # dropdown unchanged, clear rename box
 
-    session_data = load_session(user_email, session_id)  # ✅ include user_email
+    # Load session and update title
+    session_data = load_session(user_email, session_id)
     session_data["title"] = new_title
-    save_session(user_email, session_id, session_data)   # ✅ include user_email
+    save_session(user_email, session_id, session_data)
 
+    # Update conversation list dropdown and clear rename box
     return gr.update(
         choices=list_sessions(user_email),
         value=session_id
-    )
+    ), ""  # <-- this clears the rename textbox
+
 
 
 def load_selected_session(session_id):
@@ -176,8 +179,10 @@ def handle_login(email, password):
     message, user_email = login_or_signup(email, password)
 
     if not user_email:
-        return message, None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        # Login failed, leave inputs as they are
+        return message, None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), email, password
 
+    # Login successful → load sessions
     sessions = list_sessions(user_email)
 
     # If no sessions, create first one
@@ -191,15 +196,23 @@ def handle_login(email, password):
     else:
         new_session = sessions[0][1]
 
+    # Return outputs: message, user_state, dropdown, buttons enabled, chat input enabled, and clear email/password boxes
     return (
-        message,
-        user_email,
-        gr.update(choices=sessions, value=new_session, interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True)
+        message,                        # login status
+        user_email,                      # user_state
+        gr.update(choices=sessions, value=new_session, interactive=True),  # conversation list
+        gr.update(interactive=True),     # new_chat_btn
+        gr.update(interactive=True),     # rename_box
+        gr.update(interactive=True),     # rename_btn
+        gr.update(interactive=True),     # user_input
+        "",                              # clear email_input
+        ""                               # clear password_input
     )
+
+def send_suggested_question(question, chat_hist, session_id, user_email):
+    # call chat_stream and yield each result
+    for hist, inp in chat_stream(question, chat_hist, session_id, user_email):
+        yield hist, inp
 
 
 # ---------------- Chat function ----------------
@@ -312,20 +325,32 @@ with gr.Blocks() as demo:
 
             gr.Markdown("### 💡 Perguntas sugeridas")
             suggested_buttons = []
+
             with gr.Row():  # first row
                 with gr.Column():
                     btn1 = gr.Button(SUGGESTED_QUESTIONS[0])
+                    suggested_buttons.append(btn1)
                 with gr.Column():
                     btn2 = gr.Button(SUGGESTED_QUESTIONS[1])
+                    suggested_buttons.append(btn2)
 
             with gr.Row():  # second row
                 with gr.Column():
                     btn3 = gr.Button(SUGGESTED_QUESTIONS[2])
+                    suggested_buttons.append(btn3)
                 with gr.Column():
                     btn4 = gr.Button(SUGGESTED_QUESTIONS[3])
+                    suggested_buttons.append(btn4)
 
-    for btn, question in zip([btn1, btn2, btn3, btn4], SUGGESTED_QUESTIONS):
-        btn.click(lambda q=question: q, outputs=[user_input])
+
+    for btn, question in zip(suggested_buttons, SUGGESTED_QUESTIONS):
+        btn.click(
+            send_suggested_question,
+            inputs=[gr.State(lambda: question), chat_history, session_state, user_state],
+            outputs=[chat_history, user_input],
+            queue=True
+        )
+
 
 
 
@@ -346,9 +371,10 @@ with gr.Blocks() as demo:
 
     rename_btn.click(
         rename_session,
-        inputs=[rename_box, session_state, user_state],  # ✅ user_state included
-        outputs=[conversation_list]
+        inputs=[rename_box, session_state, user_state],
+        outputs=[conversation_list, rename_box]  # second output clears the box
     )
+
 
     user_input.submit(
         chat_stream,
@@ -362,14 +388,17 @@ with gr.Blocks() as demo:
         handle_login,
         inputs=[email_input, password_input],
         outputs=[
-            login_status,
-            user_state,
-            conversation_list,
-            new_chat_btn,
-            rename_box,
-            rename_btn,
-            user_input
+            login_status,        # Markdown
+            user_state,          # State
+            conversation_list,   # Dropdown
+            new_chat_btn,        # Button
+            rename_box,          # Textbox
+            rename_btn,          # Button
+            user_input,          # Chat input
+            email_input,         # Clear email
+            password_input       # Clear password
         ]
     )
 
-demo.launch()
+
+demo.launch() #share=True
