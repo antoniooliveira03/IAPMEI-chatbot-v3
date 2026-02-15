@@ -17,6 +17,10 @@ client = OpenAI()
 # Directories
 VECTOR_DIR = Path("data/05_vectorized/large")
 
+def set_vector_dir(path):
+    global VECTOR_DIR
+    VECTOR_DIR = Path(path)
+
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
@@ -76,7 +80,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
     # Dense retrieval
     q_vec = embed_query(query)
     q_vec = q_vec / np.linalg.norm(q_vec)
-    D, I = index.search(q_vec, k*2)
+    D, I = index.search(q_vec, k)
     dense_scores = D[0]
     dense_indices = I[0]
     dense_scores = (dense_scores - dense_scores.min()) / (dense_scores.max() - dense_scores.min() + 1e-8)
@@ -91,9 +95,9 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
     for idx, dense_score in zip(dense_indices, dense_scores):
         hybrid_scores[idx] = weight_dense * dense_score + weight_sparse * sparse_scores[idx]
 
-    # select top k*2 candidates
+    # select top k candidates
     candidate_indices = sorted(hybrid_scores.keys(), key=lambda x: hybrid_scores[x], reverse=True)
-    candidates = [metadata[i] for i in candidate_indices[:k*2]]
+    candidates = [metadata[i] for i in candidate_indices[:k]]
 
     # ---------------- Rerank (optional) ----------------
     if rerank:
