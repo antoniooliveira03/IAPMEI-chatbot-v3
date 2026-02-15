@@ -31,7 +31,7 @@ SUGGESTED_QUESTIONS = [
     "Qual é o objetivo principal do Programa Algarve 2030?",
     "Como as empresas podem obter a certificação PME?",
     "Qual é a diferença entre o PT2030, IAPMEI e Compete 2030?",
-    "Como funciona o processo de candidatura a incentivos do PT2030?",
+#    "Como funciona o processo de candidatura a incentivos do PT2030?",
 ]
 
 # ---------------- Session Helpers ----------------
@@ -280,13 +280,6 @@ with gr.Blocks() as demo:
 
             rename_btn = gr.Button("Guardar Nome", interactive=False)
 
-            gr.Markdown("### 💡 Perguntas sugeridas")
-
-            suggested_buttons = []
-            for q in SUGGESTED_QUESTIONS:
-                btn = gr.Button(q)
-                suggested_buttons.append(btn)
-
         # =====================
         # CHAT AREA
         # =====================
@@ -316,6 +309,25 @@ with gr.Blocks() as demo:
                 </div>
                 """
             )
+
+            gr.Markdown("### 💡 Perguntas sugeridas")
+            suggested_buttons = []
+            with gr.Row():  # first row
+                with gr.Column():
+                    btn1 = gr.Button(SUGGESTED_QUESTIONS[0])
+                with gr.Column():
+                    btn2 = gr.Button(SUGGESTED_QUESTIONS[1])
+
+            with gr.Row():  # second row
+                with gr.Column():
+                    btn3 = gr.Button(SUGGESTED_QUESTIONS[2])
+                with gr.Column():
+                    btn4 = gr.Button(SUGGESTED_QUESTIONS[3])
+
+    for btn, question in zip([btn1, btn2, btn3, btn4], SUGGESTED_QUESTIONS):
+        btn.click(lambda q=question: q, outputs=[user_input])
+
+
 
     # Button connections
     new_chat_btn.click(
@@ -359,9 +371,5 @@ with gr.Blocks() as demo:
             user_input
         ]
     )
-
-
-    for btn, question in zip(suggested_buttons, SUGGESTED_QUESTIONS):
-        btn.click(lambda q=question: q, outputs=[user_input])
 
 demo.launch()
