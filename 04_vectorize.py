@@ -9,9 +9,9 @@ import json
 load_dotenv()
 client = OpenAI()
 
-chunk_size = 600
-chunk_overlap = 60
-embeddings_type = "small" # "large" or "small"
+chunk_size = 400
+chunk_overlap = 80
+embeddings_type = "large" # "large" or "small"
 
 
 # Directories
