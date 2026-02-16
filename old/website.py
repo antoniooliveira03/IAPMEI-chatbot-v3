@@ -6,7 +6,21 @@ import login as l
 import history as h
 from chatbot import load_faiss_index, answer, build_bm25
 
-# ---------------- Config ----------------
+
+
+VECTOR_DIR = Path("data/05_vectorized/large")
+
+@st.cache_resource
+def load_resources():
+    return load_faiss_index(VECTOR_DIR)
+
+index, metadata = load_resources()
+bm25 = build_bm25(metadata)
+
+st.success("FAISS index and metadata loaded successfully!")
+
+# ---------------- Streamlit App ----------------
+
 
 SUGGESTED_QUESTIONS = [
     "O que é o PT2030?",
@@ -16,23 +30,12 @@ SUGGESTED_QUESTIONS = [
     "Como funciona o processo de candidatura a incentivos do PT2030?",
 ]
 
-
-VECTOR_DIR = Path("data/05_vectorized/large")
-
 st.set_page_config(
     page_title="PT2030 Chatbot | IAPMEI",
     page_icon="🤖",
     layout="wide"
 )
 
-# ---------------- Load RAG resources ----------------
-
-@st.cache_resource
-def load_resources():
-    return load_faiss_index(VECTOR_DIR)
-
-index, metadata = load_resources()
-bm25 = build_bm25(metadata)
 
 # ---------------- Session state ----------------
 
