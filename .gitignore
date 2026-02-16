@@ -1,5 +1,6 @@
 /env
-/data
+/data/
+
 /guidelines
 /models
 /evaluation
