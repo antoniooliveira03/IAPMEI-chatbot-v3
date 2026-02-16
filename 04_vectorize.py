@@ -9,15 +9,20 @@ import json
 load_dotenv()
 client = OpenAI()
 
+chunk_size = 400
+chunk_overlap = 40
+embeddings_type = "small" # "large" or "small"
+
+
 # Directories
-chunk_dir = Path("data/03_chunked/c800_150")
-vector_dir = Path("data/05_vectorized/large/c800_150")
+chunk_dir = Path(f"data/03_chunked/c{chunk_size}_{chunk_overlap}")
+vector_dir = Path(f"data/05_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------- Embedding ----------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-large",
+        model=f"text-embedding-3-{embeddings_type}",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32)
@@ -27,7 +32,7 @@ def build_db(chunk_dir: Path):
     metadata = []
     index = None
 
-    dim = 3072 # 3072 for text-embedding-3-large, 1536 for small
+    dim = 1536 if embeddings_type == "small" else 3072 # 3072 for text-embedding-3-large, 1536 for small
 
     index = faiss.IndexFlatIP(dim) 
     print(f"[INFO] FAISS index initialized with dim={dim}")
