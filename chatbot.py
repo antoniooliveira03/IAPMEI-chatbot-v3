@@ -149,7 +149,9 @@ def answer(user_query: str, index,
 
         Regras:
         - Responde de forma clara e concisa, não repitas informação.
-        - Baseia-te no contexto fornecido para responder.
+        - Usa TODA a informação relevante do contexto para responder de forma completa.
+        - Se existirem múltiplos pontos relevantes no contexto, inclui todos.
+        - Não ignores informação relevante.
         - Se não souberes a resposta ou se não houver informação no contexto, informa o utilizador e pergunta se podes ajudar noutro tema.
         - Sempre que possível, indica a fonte (link ou nome do ficheiro).
 
