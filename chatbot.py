@@ -123,13 +123,13 @@ def answer(user_query: str, index,
     max_history = 20
 
     # Moderation
-    mod_result = client.moderations.create(
-        model="omni-moderation-latest",
-        input=user_query
-    )
+    #mod_result = client.moderations.create(
+    #    model="omni-moderation-latest",
+    #    input=user_query
+    #)
 
-    if mod_result.results[0].flagged:
-        return "Query flagged by moderation.", []
+    #if mod_result.results[0].flagged:
+    #    return "Query flagged by moderation.", []
 
     # Retrieve context
     context_chunks = retrieve_hybrid(user_query, index, metadata, 
