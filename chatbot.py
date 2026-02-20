@@ -6,21 +6,18 @@ import faiss
 import json
 from dotenv import load_dotenv
 import os
-#from sentence_transformers import CrossEncoder
+from sentence_transformers import CrossEncoder
 from rank_bm25 import BM25Okapi
 import re
+import torch
 
 
 load_dotenv()
 client = OpenAI()
-
-#cross_encoder = CrossEncoder(
-#    "cross-encoder/ms-marco-MiniLM-L-6-v2",
-#    device="cpu"   
-#)
+cross_encoder_model = None
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/small")
+VECTOR_DIR = Path("data/05_vectorized/large")
 
 def set_vector_dir(path):
     global VECTOR_DIR
@@ -29,7 +26,7 @@ def set_vector_dir(path):
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
@@ -50,17 +47,22 @@ def load_faiss_index(vector_dir: Path):
     return index, metadata
 
 
-# ---------------- Fast Reranker ----------------
+# ---------------- Reranker ----------------
+def get_cross_encoder():
+    global cross_encoder_model
+    if cross_encoder_model is None:
+        from sentence_transformers import CrossEncoder
+        cross_encoder_model = CrossEncoder(
+            "cross-encoder/ms-marco-MiniLM-L-6-v2",
+            device="cpu"
+        )
+    return cross_encoder_model
 
-def reranker(query: str, candidate_chunks: list, top_k=5):
-    """
-    Rerank retrieved chunks using cross encoder.
-    candidate_chunks must have 'content'
-    """
-
+def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
+    model = get_cross_encoder()
     pairs = [(query, c["content"]) for c in candidate_chunks]
-
-    scores = cross_encoder.predict(pairs)
+    with torch.inference_mode():
+        scores = model.predict(pairs, convert_to_numpy=True)
 
     scored = sorted(
         zip(scores, candidate_chunks),
@@ -107,10 +109,10 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
 
     # ---------------- Rerank (optional) ----------------
     if rerank:
-        final_chunks = reranker(q_vec, candidates, top_k=top_k)
+        final_chunks = rerank_chunks(query, candidates, top_k=top_k)
     else:
         final_chunks = candidates[:top_k]
-
+    
     return final_chunks
 
 
@@ -128,6 +130,7 @@ def answer(user_query: str, index,
     global conversation_history
     max_history = 20
 
+    # TEMPORARY -- UNCOMMENT LATER
     # Moderation
     #mod_result = client.moderations.create(
     #    model="omni-moderation-latest",
@@ -189,12 +192,7 @@ def answer(user_query: str, index,
 
 # ---------------- Main Loop ----------------
 def main():
-    #index, metadata = load_faiss_index(VECTOR_DIR)
-
-    index, metadata = load_faiss_index(
-                        "/tmp/db.index",
-                        "/tmp/db.json"
-                    )
+    index, metadata = load_faiss_index(VECTOR_DIR)
 
     bm25 = build_bm25(metadata)
 
