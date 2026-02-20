@@ -6,7 +6,7 @@ import faiss
 import json
 from dotenv import load_dotenv
 import os
-from sklearn.metrics.pairwise import cosine_similarity
+#from sentence_transformers import CrossEncoder
 from rank_bm25 import BM25Okapi
 import re
 
@@ -14,8 +14,13 @@ import re
 load_dotenv()
 client = OpenAI()
 
+#cross_encoder = CrossEncoder(
+#    "cross-encoder/ms-marco-MiniLM-L-6-v2",
+#    device="cpu"   
+#)
+
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/large")
+VECTOR_DIR = Path("data/05_vectorized/small")
 
 def set_vector_dir(path):
     global VECTOR_DIR
@@ -24,7 +29,7 @@ def set_vector_dir(path):
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-large",
+        model="text-embedding-3-small",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
@@ -47,22 +52,23 @@ def load_faiss_index(vector_dir: Path):
 
 # ---------------- Fast Reranker ----------------
 
-def reranker(query_vec: np.ndarray, candidate_chunks: list, top_k=5):
+def reranker(query: str, candidate_chunks: list, top_k=5):
     """
-    candidate_chunks: list of dicts, each must have 'chunk_vector' (normalized)
-    query_vec: np.ndarray, normalized
+    Rerank retrieved chunks using cross encoder.
+    candidate_chunks must have 'content'
     """
-    # stack candidate vectors
-    chunk_vecs = np.vstack([np.array(c["chunk_vector"], dtype=np.float32) for c in candidate_chunks])
-    
-    # cosine similarity: query_vec (1, dim) x chunk_vecs (n, dim)
-    sims = cosine_similarity(query_vec, chunk_vecs)[0]
-    
-    # attach score to chunks and sort descending
-    scored_chunks = sorted(zip(sims, candidate_chunks), key=lambda x: x[0], reverse=True)
-    
-    # return top_k
-    return [c for _, c in scored_chunks[:top_k]]
+
+    pairs = [(query, c["content"]) for c in candidate_chunks]
+
+    scores = cross_encoder.predict(pairs)
+
+    scored = sorted(
+        zip(scores, candidate_chunks),
+        key=lambda x: x[0],
+        reverse=True
+    )
+
+    return [c for _, c in scored[:top_k]]
 
 
 # ---------------- BM25 ----------------
