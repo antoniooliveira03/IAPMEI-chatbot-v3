@@ -17,7 +17,7 @@ client = OpenAI()
 cross_encoder_model = None
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/large")
+VECTOR_DIR = Path("data/05_vectorized/small/c400_0")
 
 def set_vector_dir(path):
     global VECTOR_DIR
@@ -26,7 +26,7 @@ def set_vector_dir(path):
 # ---------------- Embedding ----------------
 def embedding(text: str) -> np.ndarray:
     response = client.embeddings.create(
-        model="text-embedding-3-large",
+        model="text-embedding-3-small",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
