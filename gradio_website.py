@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = Path("data/05_vectorized/large")
+VECTOR_DIR = Path("data/05_vectorized/small/c400_0")
 
 HISTORY_DIR = Path("conversation_history")
 HISTORY_DIR.mkdir(exist_ok=True)
@@ -217,9 +217,6 @@ def send_suggested_question(question, chat_hist, session_id, user_email):
 
 # ---------------- Chat function ----------------
 def chat_stream(user_query, chat_history, session_id, user_email):
-    if not user_email:
-        yield chat_history, ""
-        return
 
     if not user_query.strip():
         yield chat_history, ""
@@ -244,10 +241,14 @@ def chat_stream(user_query, chat_history, session_id, user_email):
         chat_history[assistant_index]['content'] += char
         yield chat_history, ""
 
-    # Save to JSON
-    history_file = load_session(user_email, session_id)  # ✅ include user_email
-    history_file["messages"].append({"user": user_query, "assistant": bot_response})
-    save_session(user_email, session_id, history_file)   # ✅ include user_email
+    # Save to JSON ONLY if logged in
+    if user_email and session_id:
+        history_file = load_session(user_email, session_id)
+        history_file["messages"].append({
+            "user": user_query,
+            "assistant": bot_response
+        })
+        save_session(user_email, session_id, history_file)
 
 
 
@@ -346,7 +347,7 @@ with gr.Blocks() as demo:
     for btn, question in zip(suggested_buttons, SUGGESTED_QUESTIONS):
         btn.click(
             send_suggested_question,
-            inputs=[gr.State(lambda: question), chat_history, session_state, user_state],
+            inputs=[gr.State(question), chat_history, session_state, user_state],
             outputs=[chat_history, user_input],
             queue=True
         )
