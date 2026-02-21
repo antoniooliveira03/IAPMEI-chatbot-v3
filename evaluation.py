@@ -39,7 +39,7 @@ nest_asyncio.apply()
 
 # ---- Parameters ----
 chunk_size = 400
-chunk_overlap = 80
+chunk_overlap = 40
 embeddings_type = "small"
 k = 10
 top_k = 10
