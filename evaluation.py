@@ -38,13 +38,13 @@ nest_asyncio.apply()
 
 
 # ---- Parameters ----
-chunk_size = 400
-chunk_overlap = 40
+chunk_size = 600
+chunk_overlap = 120
 embeddings_type = "small"
-k = 10
-top_k = 10
-weight_dense = 0.5
-weight_sparse = 0.5
+k = 15
+top_k = 15
+weight_dense = 0.6
+weight_sparse = 0.4
 rerank = False
 
 # ---- Load evaluation dataset ----
