@@ -17,7 +17,7 @@ client = OpenAI()
 cross_encoder_model = None
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/small/c400_0")
+VECTOR_DIR = Path("data/05_vectorized/small/c600_120")
 
 def set_vector_dir(path):
     global VECTOR_DIR
@@ -203,9 +203,9 @@ def main():
             break
         answer(user_query, index, metadata, bm25, 
                     model="gpt-4o-mini",  
-                    k=20,top_k=5, 
-                    weight_dense=0.6, 
-                    weight_sparse=0.4, 
+                    k=10,top_k=10, 
+                    weight_dense=0.5, 
+                    weight_sparse=0.5, 
                     rerank=False)
 
 if __name__ == "__main__":
