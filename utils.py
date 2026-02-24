@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import chatbot
+import time
 
 def json_to_documents(data: dict):
     """Convert the JSON data into a list of documents for evaluation."""
@@ -37,10 +38,12 @@ def populate_eval_dataset(eval_dataset, index, metadata, bm25,
 
     for sample in tqdm(eval_dataset, desc="Generating bot answers"):
         question = sample["question"]
-        # Optional: use sample['source'] if needed by retriever
+        
         source = sample.get("source", "")
 
-        # Call your existing bot
+        start_time = time.perf_counter()
+
+        # Call  existing bot
         generated_answer, context_chunks = chatbot.answer(
             user_query=question,
             index=index,
@@ -54,9 +57,13 @@ def populate_eval_dataset(eval_dataset, index, metadata, bm25,
             rerank=rerank
         )
 
+        end_time = time.perf_counter()
+        latency = end_time - start_time
+
         # Save results back into sample
         sample["bot_answer"] = generated_answer
         sample["contexts"] = [c["content"] for c in context_chunks]
+        sample["response_time"] = latency 
 
         updated_dataset.append(sample)
 

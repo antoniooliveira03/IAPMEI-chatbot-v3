@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = Path("data/05_vectorized/small/c400_0")
+VECTOR_DIR = Path("data/05_vectorized/small/c600_120")
 
 HISTORY_DIR = Path("conversation_history")
 HISTORY_DIR.mkdir(exist_ok=True)
@@ -210,10 +210,8 @@ def handle_login(email, password):
     )
 
 def send_suggested_question(question, chat_hist, session_id, user_email):
-    # call chat_stream and yield each result
-    for hist, inp in chat_stream(question, chat_hist, session_id, user_email):
-        yield hist, inp
-
+    for hist, inp, sess in chat_stream(question, chat_hist, session_id, user_email):
+        yield hist, inp, sess
 
 # ---------------- Chat function ----------------
 def chat_stream(user_query, chat_history, session_id, user_email):
@@ -225,13 +223,16 @@ def chat_stream(user_query, chat_history, session_id, user_email):
     if chat_history is None:
         chat_history = []
 
+    if not session_id:
+        session_id = generate_session_id()
+
     # Append user message
     chat_history.append({"role": "user", "content": user_query})
     chat_history.append({"role": "assistant", "content": ""})
     assistant_index = len(chat_history) - 1
 
     # Clear input immediately
-    yield chat_history, ""
+    yield chat_history, "", session_id
 
     # Get bot response
     bot_response, _ = answer(user_query, index, metadata, bm25)
@@ -239,7 +240,7 @@ def chat_stream(user_query, chat_history, session_id, user_email):
     # Stream character by character
     for char in bot_response:
         chat_history[assistant_index]['content'] += char
-        yield chat_history, ""
+        yield chat_history, "", session_id
 
     # Save to JSON ONLY if logged in
     if user_email and session_id:
@@ -304,14 +305,7 @@ with gr.Blocks() as demo:
             user_input = gr.Textbox(
                 placeholder="Escreve a tua pergunta...",
                 lines=1,
-                interactive=False
-            )
-
-            user_input.submit(
-                chat_stream,
-                inputs=[user_input, chat_history, session_state, user_state],
-                outputs=[chat_history, user_input],
-                queue=True
+                interactive=True
             )
 
             gr.Markdown(
@@ -348,7 +342,7 @@ with gr.Blocks() as demo:
         btn.click(
             send_suggested_question,
             inputs=[gr.State(question), chat_history, session_state, user_state],
-            outputs=[chat_history, user_input],
+            outputs=[chat_history, user_input, session_state],
             queue=True
         )
 
