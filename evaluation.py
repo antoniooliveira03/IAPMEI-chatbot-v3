@@ -43,8 +43,8 @@ chunk_overlap = 120
 embeddings_type = "small"
 k = 15
 top_k = 15
-weight_dense = 0.5
-weight_sparse = 0.5
+weight_dense = 0.6
+weight_sparse = 0.4
 rerank = True
 
 # ---- Load evaluation dataset ----
