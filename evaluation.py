@@ -41,11 +41,11 @@ nest_asyncio.apply()
 chunk_size = 600
 chunk_overlap = 120
 embeddings_type = "small"
-k = 15
-top_k = 15
-weight_dense = 0.6
-weight_sparse = 0.4
-rerank = True
+k = 10
+top_k = 10
+weight_dense = 0.5
+weight_sparse = 0.5
+rerank = False
 
 # ---- Load evaluation dataset ----
 with open("evaluation/evaluation_dataset_v2.json", "r", encoding="utf-8") as f:
@@ -131,3 +131,13 @@ result = evaluate(dataset, embeddings=embeddings,
 
 
 print(f"{filename}: \n\n{result}")
+
+# Convert to dict first
+result_dict = result.to_dict()  # most RAGAS results support .to_dict()
+
+# Save to file
+filename_json = "evaluation_result.json"
+with open(filename_json, "w") as f:
+    json.dump(result_dict, f, indent=4)
+
+print(f"Saved results to {filename_json}")
