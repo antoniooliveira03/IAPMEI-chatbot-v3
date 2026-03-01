@@ -38,13 +38,13 @@ nest_asyncio.apply()
 
 
 # ---- Parameters ----
-chunk_size = 600
-chunk_overlap = 120
+chunk_size = 400
+chunk_overlap = 0
 embeddings_type = "small"
 k = 10
 top_k = 10
-weight_dense = 0.5
-weight_sparse = 0.5
+weight_dense = 0.4
+weight_sparse = 0.6
 rerank = False
 
 # ---- Load evaluation dataset ----
@@ -119,7 +119,9 @@ dataset = dataset.rename_columns({
 })
 
 # Create evaluator LLM
-llm = llm_factory("gpt-3.5-turbo", provider="openai", 
+llm = llm_factory("gpt-4o-mini", provider="openai", 
+                  temperature = 0,
+                  max_tokens=2000,
                   client=client)
 
 # Create embeddings via langchain_openai
@@ -133,11 +135,8 @@ result = evaluate(dataset, embeddings=embeddings,
 print(f"{filename}: \n\n{result}")
 
 # Convert to dict first
-result_dict = result.to_dict()  # most RAGAS results support .to_dict()
+result_pandas = result.to_pandas()
 
-# Save to file
-filename_json = "evaluation_result.json"
-with open(filename_json, "w") as f:
-    json.dump(result_dict, f, indent=4)
-
-print(f"Saved results to {filename_json}")
+# Save to CSV
+csv_filename = f"evaluation_results_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}.csv"
+result_pandas.to_csv(f"evaluation/results/{csv_filename}", index=False)
