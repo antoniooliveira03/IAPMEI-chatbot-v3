@@ -323,18 +323,18 @@ with gr.Blocks() as demo:
 
             with gr.Row():  # first row
                 with gr.Column():
-                    btn1 = gr.Button(SUGGESTED_QUESTIONS[0])
+                    btn1 = gr.Button(SUGGESTED_QUESTIONS[0], variant="primary")
                     suggested_buttons.append(btn1)
                 with gr.Column():
-                    btn2 = gr.Button(SUGGESTED_QUESTIONS[1])
+                    btn2 = gr.Button(SUGGESTED_QUESTIONS[1], variant="primary")
                     suggested_buttons.append(btn2)
 
             with gr.Row():  # second row
                 with gr.Column():
-                    btn3 = gr.Button(SUGGESTED_QUESTIONS[2])
+                    btn3 = gr.Button(SUGGESTED_QUESTIONS[2], variant="primary")
                     suggested_buttons.append(btn3)
                 with gr.Column():
-                    btn4 = gr.Button(SUGGESTED_QUESTIONS[3])
+                    btn4 = gr.Button(SUGGESTED_QUESTIONS[3], variant="primary")
                     suggested_buttons.append(btn4)
 
 
@@ -396,4 +396,4 @@ with gr.Blocks() as demo:
     )
 
 
-demo.launch() #share=True
+demo.launch(share=True) #share=True
