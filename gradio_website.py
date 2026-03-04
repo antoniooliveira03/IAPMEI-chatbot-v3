@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = Path("data/05_vectorized/small/c600_120")
+VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
 
 HISTORY_DIR = Path("conversation_history")
 HISTORY_DIR.mkdir(exist_ok=True)
@@ -323,18 +323,18 @@ with gr.Blocks() as demo:
 
             with gr.Row():  # first row
                 with gr.Column():
-                    btn1 = gr.Button(SUGGESTED_QUESTIONS[0], variant="primary")
+                    btn1 = gr.Button(SUGGESTED_QUESTIONS[0])
                     suggested_buttons.append(btn1)
                 with gr.Column():
-                    btn2 = gr.Button(SUGGESTED_QUESTIONS[1], variant="primary")
+                    btn2 = gr.Button(SUGGESTED_QUESTIONS[1])
                     suggested_buttons.append(btn2)
 
             with gr.Row():  # second row
                 with gr.Column():
-                    btn3 = gr.Button(SUGGESTED_QUESTIONS[2], variant="primary")
+                    btn3 = gr.Button(SUGGESTED_QUESTIONS[2])
                     suggested_buttons.append(btn3)
                 with gr.Column():
-                    btn4 = gr.Button(SUGGESTED_QUESTIONS[3], variant="primary")
+                    btn4 = gr.Button(SUGGESTED_QUESTIONS[3])
                     suggested_buttons.append(btn4)
 
 

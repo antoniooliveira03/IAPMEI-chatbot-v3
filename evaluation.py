@@ -46,7 +46,7 @@ top_k = 15
 weight_dense = 0.4
 weight_sparse = 0.6
 rerank = False
-v = 3
+v = 5
 
 # ---- Load evaluation dataset ----
 with open("evaluation/evaluation_dataset_v2.json", "r", encoding="utf-8") as f:

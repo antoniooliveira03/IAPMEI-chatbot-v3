@@ -17,7 +17,7 @@ client = OpenAI()
 cross_encoder_model = None
 
 # Directories
-VECTOR_DIR = Path("data/05_vectorized/small/c600_120")
+VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
 
 def set_vector_dir(path):
     global VECTOR_DIR
