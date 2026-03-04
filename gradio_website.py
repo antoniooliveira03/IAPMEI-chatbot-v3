@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = Path("data/05_vectorized/small/c600_120")
+VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
 
 HISTORY_DIR = Path("conversation_history")
 HISTORY_DIR.mkdir(exist_ok=True)
@@ -396,4 +396,4 @@ with gr.Blocks() as demo:
     )
 
 
-demo.launch() #share=True
+demo.launch(share=True) #share=True

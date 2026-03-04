@@ -46,6 +46,7 @@ top_k = 15
 weight_dense = 0.4
 weight_sparse = 0.6
 rerank = False
+v = 5
 
 # ---- Load evaluation dataset ----
 with open("evaluation/evaluation_dataset_v2.json", "r", encoding="utf-8") as f:
@@ -61,7 +62,7 @@ print(f"Index and metadata loaded at {chatbot.VECTOR_DIR}")
 
 
 # ---- Populate evaluation dataset with retrieved contexts ----
-filename = f"eval_dataset_filled_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}.json"
+filename = f"eval_dataset_filled_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}_v{v}.json"
 filepath = Path("evaluation") / filename
 
 if not filepath.exists():
@@ -138,5 +139,5 @@ print(f"{filename}: \n\n{result}")
 result_pandas = result.to_pandas()
 
 # Save to CSV
-csv_filename = f"evaluation_results_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}.csv"
+csv_filename = f"evaluation_results_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}_v{v}.csv"
 result_pandas.to_csv(f"evaluation/results/{csv_filename}", index=False)
