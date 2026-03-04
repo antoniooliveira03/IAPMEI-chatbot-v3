@@ -6,7 +6,7 @@ import faiss
 import json
 from dotenv import load_dotenv
 import os
-from sentence_transformers import CrossEncoder
+#from sentence_transformers import CrossEncoder
 from rank_bm25 import BM25Okapi
 import re
 #import torch
@@ -14,7 +14,7 @@ import re
 
 load_dotenv()
 client = OpenAI()
-cross_encoder_model = None
+#cross_encoder_model = None
 
 # Directories
 VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
@@ -48,14 +48,14 @@ def load_faiss_index(vector_dir: Path):
 
 
 # ---------------- Reranker ----------------
-def get_cross_encoder():
-    global cross_encoder_model
-    if cross_encoder_model is None:
-        from sentence_transformers import CrossEncoder
-        cross_encoder_model = CrossEncoder(
-            "cross-encoder/ms-marco-MiniLM-L-6-v2",
-            device="cpu"
-        )
+#def get_cross_encoder():
+#    global cross_encoder_model
+#    if cross_encoder_model is None:
+#        from sentence_transformers import CrossEncoder
+#        cross_encoder_model = CrossEncoder(
+#            "cross-encoder/ms-marco-MiniLM-L-6-v2",
+#            device="cpu"
+#        )
     return cross_encoder_model
 
 #def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
