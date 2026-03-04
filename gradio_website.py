@@ -396,4 +396,4 @@ with gr.Blocks() as demo:
     )
 
 
-demo.launch() #share=True
+demo.launch(share=True) #share=True
