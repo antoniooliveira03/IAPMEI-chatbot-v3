@@ -9,7 +9,7 @@ import os
 from sentence_transformers import CrossEncoder
 from rank_bm25 import BM25Okapi
 import re
-import torch
+#import torch
 
 
 load_dotenv()
@@ -58,19 +58,19 @@ def get_cross_encoder():
         )
     return cross_encoder_model
 
-def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
-    model = get_cross_encoder()
-    pairs = [(query, c["content"]) for c in candidate_chunks]
-    with torch.inference_mode():
-        scores = model.predict(pairs, convert_to_numpy=True)
-
-    scored = sorted(
-        zip(scores, candidate_chunks),
-        key=lambda x: x[0],
-        reverse=True
-    )
-
-    return [c for _, c in scored[:top_k]]
+#def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
+#    model = get_cross_encoder()
+#    pairs = [(query, c["content"]) for c in candidate_chunks]
+#    with torch.inference_mode():
+#        scores = model.predict(pairs, convert_to_numpy=True)
+#
+#    scored = sorted(
+#        zip(scores, candidate_chunks),
+#        key=lambda x: x[0],
+#        reverse=True
+#    )
+#
+#    return [c for _, c in scored[:top_k]]
 
 
 # ---------------- BM25 ----------------
@@ -109,7 +109,8 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
 
     # ---------------- Rerank (optional) ----------------
     if rerank:
-        final_chunks = rerank_chunks(query, candidates, top_k=top_k)
+      #  final_chunks = rerank_chunks(query, candidates, top_k=top_k)
+      pass
     else:
         final_chunks = candidates[:top_k]
     
@@ -132,10 +133,10 @@ def answer(user_query: str, index,
 
     # TEMPORARY -- UNCOMMENT LATER
     # Moderation
-    #mod_result = client.moderations.create(
-    #    model="omni-moderation-latest",
-    #    input=user_query
-    #)
+    mod_result = client.moderations.create(
+        model="omni-moderation-latest",
+        input=user_query
+    )
 
     #if mod_result.results[0].flagged:
     #    return "Query flagged by moderation.", []
