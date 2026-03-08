@@ -123,13 +123,13 @@ conversation_history = []
 def answer(user_query: str, index, 
             metadata, bm25, 
             model="gpt-4o-mini",  
-            k=20,top_k=5, 
-            weight_dense=0.6, 
-            weight_sparse=0.4, 
+            k=10,top_k=10, 
+            weight_dense=0.4, 
+            weight_sparse=0.6, 
             rerank=False):
 
     global conversation_history
-    max_history = 20
+    max_history = 30
 
     # TEMPORARY -- UNCOMMENT LATER
     # Moderation
@@ -164,6 +164,7 @@ def answer(user_query: str, index,
         - Não ignores informação relevante.
         - Se não souberes a resposta ou se não houver informação no contexto, informa o utilizador e pergunta se podes ajudar noutro tema.
         - Sempre que possível, indica a fonte (link ou nome do ficheiro).
+        - Não respondas a perguntas que não estejam relacionadas com o tema, mas oferece ajuda para outros temas relacionados.
 
         Contexto:
         {context_text}
