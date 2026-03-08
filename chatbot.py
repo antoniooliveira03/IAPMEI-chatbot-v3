@@ -123,13 +123,13 @@ conversation_history = []
 def answer(user_query: str, index, 
             metadata, bm25, 
             model="gpt-4o-mini",  
-            k=20,top_k=5, 
-            weight_dense=0.6, 
-            weight_sparse=0.4, 
+            k=10,top_k=10, 
+            weight_dense=0.4, 
+            weight_sparse=0.6, 
             rerank=False):
 
     global conversation_history
-    max_history = 20
+    max_history = 30
 
     # TEMPORARY -- UNCOMMENT LATER
     # Moderation
