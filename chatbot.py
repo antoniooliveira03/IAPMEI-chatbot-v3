@@ -6,15 +6,15 @@ import faiss
 import json
 from dotenv import load_dotenv
 import os
-#from sentence_transformers import CrossEncoder
+from sentence_transformers import CrossEncoder
 from rank_bm25 import BM25Okapi
 import re
-#import torch
+import torch
 
 
 load_dotenv()
 client = OpenAI()
-#cross_encoder_model = None
+cross_encoder_model = None
 
 # Directories
 VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
@@ -48,29 +48,29 @@ def load_faiss_index(vector_dir: Path):
 
 
 # ---------------- Reranker ----------------
-#def get_cross_encoder():
-#    global cross_encoder_model
-#    if cross_encoder_model is None:
-#        from sentence_transformers import CrossEncoder
-#        cross_encoder_model = CrossEncoder(
-#            "cross-encoder/ms-marco-MiniLM-L-6-v2",
-#            device="cpu"
-#        )
+def get_cross_encoder():
+    global cross_encoder_model
+    if cross_encoder_model is None:
+        from sentence_transformers import CrossEncoder
+        cross_encoder_model = CrossEncoder(
+            "cross-encoder/ms-marco-MiniLM-L-6-v2",
+            device="cpu"
+        )
     return cross_encoder_model
 
-#def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
-#    model = get_cross_encoder()
-#    pairs = [(query, c["content"]) for c in candidate_chunks]
-#    with torch.inference_mode():
-#        scores = model.predict(pairs, convert_to_numpy=True)
-#
-#    scored = sorted(
-#        zip(scores, candidate_chunks),
-#        key=lambda x: x[0],
-#        reverse=True
-#    )
-#
-#    return [c for _, c in scored[:top_k]]
+def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
+    model = get_cross_encoder()
+    pairs = [(query, c["content"]) for c in candidate_chunks]
+    with torch.inference_mode():
+        scores = model.predict(pairs, convert_to_numpy=True)
+
+    scored = sorted(
+        zip(scores, candidate_chunks),
+        key=lambda x: x[0],
+        reverse=True
+    )
+
+    return [c for _, c in scored[:top_k]]
 
 
 # ---------------- BM25 ----------------
@@ -109,8 +109,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
 
     # ---------------- Rerank (optional) ----------------
     if rerank:
-      #  final_chunks = rerank_chunks(query, candidates, top_k=top_k)
-      pass
+        final_chunks = rerank_chunks(query, candidates, top_k=top_k)
     else:
         final_chunks = candidates[:top_k]
     
@@ -131,15 +130,15 @@ def answer(user_query: str, index,
     global conversation_history
     max_history = 30
 
-    # TEMPORARY -- UNCOMMENT LATER
+    
     # Moderation
     mod_result = client.moderations.create(
         model="omni-moderation-latest",
         input=user_query
     )
 
-    #if mod_result.results[0].flagged:
-    #    return "Query flagged by moderation.", []
+    if mod_result.results[0].flagged:
+        return "Query flagged by moderation.", []
 
     # Retrieve context
     context_chunks = retrieve_hybrid(user_query, index, metadata, 
