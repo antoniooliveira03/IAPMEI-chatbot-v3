@@ -4,7 +4,7 @@ import subprocess
 scripts = [
     #"01_cleaning.py",
     "02_chunk.py",
-    "03_metadata.py"
+    "03_vectorize.py"
 ]
 
 for script in scripts:
