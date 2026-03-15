@@ -13,7 +13,7 @@ VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
 HISTORY_DIR = Path("conversation_history")
 HISTORY_DIR.mkdir(exist_ok=True)
 
-USERS_FILE = Path("users.json")
+USERS_FILE = Path("conversation_history/users.json")
 if not USERS_FILE.exists():
     with open(USERS_FILE, "w") as f:
         json.dump({}, f)
@@ -31,7 +31,6 @@ SUGGESTED_QUESTIONS = [
     "Qual é o objetivo principal do Programa Algarve 2030?",
     "Como as empresas podem obter a certificação PME?",
     "Qual é a diferença entre o PT2030, IAPMEI e Compete 2030?",
-#    "Como funciona o processo de candidatura a incentivos do PT2030?",
 ]
 
 # ---------------- Session Helpers ----------------
