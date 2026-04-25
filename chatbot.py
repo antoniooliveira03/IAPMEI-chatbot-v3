@@ -122,7 +122,7 @@ conversation_history = []
 def answer(user_query: str, index, 
             metadata, bm25, 
             model="gpt-4o-mini",  
-            k=10,top_k=10, 
+            k=15,top_k=15, 
             weight_dense=0.4, 
             weight_sparse=0.6, 
             rerank=False):
