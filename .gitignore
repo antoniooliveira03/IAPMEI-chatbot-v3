@@ -9,9 +9,6 @@ botscraper/.scrapy
 /models
 
 /evaluation/.ipynb_checkpoints
-
-
-
 .env
 __pycache__/
 
