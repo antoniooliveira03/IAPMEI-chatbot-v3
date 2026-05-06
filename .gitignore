@@ -2,7 +2,9 @@
 /myenv
 /old
 /.ipynb_checkpoints
-
+/.gradio
+/.devcontainer
+botscraper/.scrapy
 /guidelines
 /models
 
@@ -17,6 +19,6 @@ __pycache__/
 *.json
 *.DS_Store
 
-botscraper/.scrapy
+
 
 
