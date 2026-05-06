@@ -1,5 +1,5 @@
 from tqdm import tqdm
-import chatbot
+import chatbot.chatbot as chatbot
 import time
 
 def json_to_documents(data: dict):
@@ -20,20 +20,9 @@ def json_to_documents(data: dict):
 
 
 def populate_eval_dataset(eval_dataset, index, metadata, bm25, 
-                          model="gpt-4o-mini", k=20, top_k=5, 
-                          weight_dense=0.6, weight_sparse=0.4, rerank=False):
-    """
-    Fill the 'answer' and 'contexts' fields in the evaluation dataset
-    by calling your bot function.
-
-    Args:
-        eval_dataset (list ofuti dicts): each dict must have 'question' and optionally 'source'
-        index, metadata, bm25: your RAG components
-        model, k, top_k, weight_dense, weight_sparse, rerank: bot settings
-
-    Returns:
-        list of dicts: same dataset with 'answer' and 'contexts' populated
-    """
+                          model="gpt-4o-mini", k=10, top_k=10, 
+                          weight_dense=0.4, weight_sparse=0.6, rerank=False):
+    """Populate the evaluation dataset by generating bot answers for each question, along with context and response time."""
     updated_dataset = []
 
     for sample in tqdm(eval_dataset, desc="Generating bot answers"):

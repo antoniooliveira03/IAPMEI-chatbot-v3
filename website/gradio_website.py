@@ -1,5 +1,5 @@
 import gradio as gr
-from chatbot import load_faiss_index, build_bm25, answer
+from chatbot.chatbot import load_faiss_index, build_bm25, answer
 from pathlib import Path
 import json
 import time
@@ -33,19 +33,23 @@ SUGGESTED_QUESTIONS = [
     "Qual é a diferença entre o PT2030, IAPMEI e Compete 2030?",
 ]
 
-# ---------------- Session Helpers ----------------
+# Helpers
 
 def generate_session_id():
+    """Generate a unique session ID using timestamp and UUID."""
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def get_session_file(session_id):
+    """Get the file path for a given session ID."""
     return HISTORY_DIR / f"{session_id}.json"
 
 def list_sessions():
+    """List all session IDs available in the history directory, sorted by most recent first."""
     files = sorted(HISTORY_DIR.glob("*.json"), reverse=True)
     return [f.stem for f in files]
 
 def load_session(user_email, session_id):
+    """Load session data for a given user and session ID. Returns a default structure if not found."""
     path = HISTORY_DIR / user_email / f"{session_id}.json"
     if path.exists():
         with open(path, "r", encoding="utf-8") as f:
@@ -54,6 +58,7 @@ def load_session(user_email, session_id):
 
 
 def save_session(user_email, session_id, data):
+    """Save session data for a given user and session ID. Creates user folder if it doesn't exist."""
     user_folder = HISTORY_DIR / user_email
     user_folder.mkdir(parents=True, exist_ok=True)
 
@@ -64,6 +69,7 @@ def save_session(user_email, session_id, data):
 
 
 def new_chat(user_email):
+    """Start a new chat session for the logged-in user. If no user is logged in, do nothing."""
     if not user_email:
         # No user logged in
         return [], "", None, gr.update()
@@ -89,6 +95,7 @@ def new_chat(user_email):
 
 
 def rename_session(new_title, session_id, user_email):
+    """Rename the current session. If no user is logged in, do nothing."""
     if not user_email:
         return gr.update(), ""  # dropdown unchanged, clear rename box
 
@@ -106,6 +113,7 @@ def rename_session(new_title, session_id, user_email):
 
 
 def load_selected_session(session_id):
+    """Load the selected session's messages and format them for the chatbot. If no user is logged in, return empty."""
     session_data = load_session(session_id)
     
     chat_format = []
@@ -116,6 +124,7 @@ def load_selected_session(session_id):
     return chat_format, session_id
 
 def list_sessions(user_email):
+    """List all sessions for the logged-in user, sorted by most recent first. If no user is logged in, return empty."""
     if not user_email:
         return []
 
@@ -134,10 +143,11 @@ def list_sessions(user_email):
     return sessions
 
 def load_selected_session(session_id, user_email):
+    """Load the selected session's messages and format them for the chatbot. If no user is logged in, return empty."""
     if not user_email:
         return [], None
 
-    session_data = load_session(user_email, session_id)  # ✅ include user_email
+    session_data = load_session(user_email, session_id)  # include user_email
 
     chat_format = []
     for msg in session_data["messages"]:
@@ -149,6 +159,7 @@ def load_selected_session(session_id, user_email):
 
 
 def load_users():
+    """Load users from the JSON file. Returns a dictionary of {email: password}."""
     with open(USERS_FILE, "r") as f:
         return json.load(f)
 
@@ -175,6 +186,7 @@ def login_or_signup(email, password):
         return f"🎉 Conta criada com sucesso ({email})", email
 
 def handle_login(email, password):
+    """Handle login/signup logic. Returns status message, user email (for state), and UI updates."""
     message, user_email = login_or_signup(email, password)
 
     if not user_email:
@@ -209,11 +221,14 @@ def handle_login(email, password):
     )
 
 def send_suggested_question(question, chat_hist, session_id, user_email):
+    """Handle clicks on suggested question buttons. It behaves like submitting a question, but the input box is not used (it remains unchanged)."""
     for hist, inp, sess in chat_stream(question, chat_hist, session_id, user_email):
         yield hist, inp, sess
 
-# ---------------- Chat function ----------------
+# Chat function
 def chat_stream(user_query, chat_history, session_id, user_email):
+
+    """Process user query, generate bot response, and stream it character by character. Also handles saving the conversation if the user is logged in."""
 
     if not user_query.strip():
         yield chat_history, ""
@@ -252,7 +267,7 @@ def chat_stream(user_query, chat_history, session_id, user_email):
 
 
 
-# ---------------- Gradio Interface ----------------
+# Gradio Interface
 with gr.Blocks() as demo:
     gr.Markdown("## 🤖 Assistente PT2030 / IAPMEI")
 
@@ -261,9 +276,7 @@ with gr.Blocks() as demo:
 
     with gr.Row():
 
-        # =====================
         # SIDEBAR
-        # =====================
         with gr.Column(scale=0.25):
 
             # 🔐 Login Section
@@ -277,7 +290,7 @@ with gr.Blocks() as demo:
 
             gr.Markdown("---")
 
-            # 💬 Conversation Section
+            # Conversation Section
             new_chat_btn = gr.Button("🆕 Nova Conversa", interactive=False)
 
             conversation_list = gr.Dropdown(
@@ -294,9 +307,7 @@ with gr.Blocks() as demo:
 
             rename_btn = gr.Button("Guardar Nome", interactive=False)
 
-        # =====================
         # CHAT AREA
-        # =====================
         with gr.Column(scale=0.75):
 
             chat_history = gr.Chatbot()
@@ -345,9 +356,6 @@ with gr.Blocks() as demo:
             queue=True
         )
 
-
-
-
     # Button connections
     new_chat_btn.click(
         new_chat,
@@ -359,7 +367,7 @@ with gr.Blocks() as demo:
 
     conversation_list.change(
         load_selected_session,
-        inputs=[conversation_list, user_state],  # ✅ user_state included
+        inputs=[conversation_list, user_state],  # user_state included
         outputs=[chat_history, session_state]
     )
 
@@ -372,7 +380,7 @@ with gr.Blocks() as demo:
 
     user_input.submit(
         chat_stream,
-        inputs=[user_input, chat_history, session_state, user_state],  # ✅ user_state included
+        inputs=[user_input, chat_history, session_state, user_state],  # user_state included
         outputs=[chat_history, user_input],
         queue=True
     )
@@ -395,4 +403,5 @@ with gr.Blocks() as demo:
     )
 
 
-demo.launch(share=True) #share=True
+# Launch the app
+demo.launch(share=True)

@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
-from file_patterns import FORBIDDEN_TOPICS
+from utils.file_patterns import FORBIDDEN_TOPICS
 import argparse
 
 load_dotenv()

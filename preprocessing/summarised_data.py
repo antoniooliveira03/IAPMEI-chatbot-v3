@@ -7,6 +7,7 @@ output_dir = Path("data/01_extracted")
 output_dir.mkdir(exist_ok=True)
 
 def safe_filename(name):
+    """Convert a string into a safe filename by replacing invalid characters with underscores."""
     return re.sub(r'[\\/*?:"<>|]', "_", name)
 
 xls = pd.ExcelFile(excel_path)

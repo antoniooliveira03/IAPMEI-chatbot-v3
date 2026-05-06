@@ -58,9 +58,9 @@ DOWNLOAD_DELAY = 1
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "botscraper.pipelines.BotscraperPipeline": 300,
-#}
+ITEM_PIPELINES = {
+   "botscraper.pipelines.PerSiteJsonWriter": 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -86,11 +86,11 @@ HTTPCACHE_DIR = "httpcache"
 # Set settings whose default value is deprecated to a future-proof value
 FEED_EXPORT_ENCODING = "utf-8"
 
-NAME = "iapmei"
+#NAME = "iapmei"
+#FEEDS = {
+#    f"/Users/antoniooliveira/Documents/GitHub/IAPMEI-chatbot-v3/data/01_extracted/{NAME}.json": {"format": "json", "overwrite": True}}
 
-FEEDS = {
-    f"/Users/antoniooliveira/Documents/GitHub/IAPMEI-chatbot-v3/data/01_extracted/{NAME}.json": {"format": "json", "overwrite": True}}
-
+DATA_BASE_PATH = "/Users/antoniooliveira/Documents/GitHub/IAPMEI-chatbot-v3/data/01_extracted"
 DEPTH_LIMIT = 3
 DEPTH_STATS_VERBOSE = True
 

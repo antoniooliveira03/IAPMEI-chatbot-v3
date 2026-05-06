@@ -1,20 +1,48 @@
+# Libraries
 import re
 import json
 from pathlib import Path
 import fasttext
-from file_patterns import FILE_PATTERNS, NAV_WORDS, COMMON_PT_VERBS
+from utils.file_patterns import FILE_PATTERNS, NAV_WORDS, COMMON_PT_VERBS
 import argparse
 
-# =========================
-# Load FastText model
-# =========================
 
+# Load FastText model
 FASTTEXT_MODEL = fasttext.load_model("models/lid.176.bin")
 
+import json
 
-# =========================
+# Loader
+def load_json_records(path):
+    """
+    Supports BOTH:
+    - JSON array files (current scraper output)
+    - JSONL files (future / older versions)
+    """
+
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read().strip()
+
+    # Case 1
+    if content.startswith("["):
+        return json.loads(content)
+
+    # Case 2
+    records = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            # skip broken lines safely
+            continue
+
+    return records
+
+
 # Base cleaning
-# =========================
 
 def base_clean_text(text: str) -> str:
     """Standard cleaning: normalize whitespace, punctuation, and line breaks."""
@@ -32,12 +60,8 @@ def base_clean_text(text: str) -> str:
     return text.strip()
 
 
-# =========================
-# Boilerplate removal
-# =========================
-
 def clean_text_with_boilerplate(text: str, file_stem: str) -> str:
-    """Apply base cleaning + site-specific boilerplate removal."""
+    """Apply file-specific boilerplate removal patterns, then base cleaning."""
     cleaned = base_clean_text(text)
 
     for pattern in FILE_PATTERNS.get(file_stem, []):
@@ -55,11 +79,8 @@ def clean_text_with_boilerplate(text: str, file_stem: str) -> str:
     return cleaned
 
 
-# =========================
-# Heuristic paragraph filters
-# =========================
-
 def deduplicate_paragraphs(text: str) -> str:
+    """Remove duplicate paragraphs while preserving order."""
     seen = set()
     out = []
 
@@ -73,6 +94,7 @@ def deduplicate_paragraphs(text: str) -> str:
 
 
 def drop_navigation_paragraphs(text: str, max_ratio: float = 0.4) -> str:
+    """Drop paragraphs that are heavily dominated by navigation words."""
     paras = re.split(r'\n{2,}', text)
     keep = []
 
@@ -89,6 +111,7 @@ def drop_navigation_paragraphs(text: str, max_ratio: float = 0.4) -> str:
 
 
 def drop_caps_heavy_paragraphs(text: str, max_ratio: float = 0.5) -> str:
+    """Drop paragraphs that are heavily dominated by uppercase words."""
     paras = re.split(r'\n{2,}', text)
     keep = []
 
@@ -105,6 +128,7 @@ def drop_caps_heavy_paragraphs(text: str, max_ratio: float = 0.5) -> str:
 
 
 def drop_url_heavy_paragraphs(text: str, max_ratio: float = 0.25) -> str:
+    """Drop paragraphs that are heavily dominated by URLs."""
     paras = re.split(r'\n{2,}', text)
     keep = []
 
@@ -121,6 +145,7 @@ def drop_url_heavy_paragraphs(text: str, max_ratio: float = 0.25) -> str:
 
 
 def drop_verb_less_paragraphs(text: str) -> str:
+    """Drop paragraphs that do not contain common Portuguese verbs."""
     paras = re.split(r'\n{2,}', text)
     keep = []
 
@@ -131,10 +156,7 @@ def drop_verb_less_paragraphs(text: str) -> str:
 
     return "\n\n".join(keep)
 
-
-# =========================
 # Language filtering
-# =========================
 
 def keep_only_portuguese_paragraphs_fasttext(
     text: str,
@@ -142,6 +164,7 @@ def keep_only_portuguese_paragraphs_fasttext(
     min_pt_ratio: float = 0.6,
     min_confidence: float = 0.75
 ) -> str:
+    """Keep only paragraphs that are likely Portuguese based on FastText language identification."""
     if not text:
         return ""
 
@@ -176,16 +199,16 @@ def keep_only_portuguese_paragraphs_fasttext(
     return "\n\n".join(pt_paragraphs)
 
 
-# =========================
 # Helpers
-# =========================
 
 def is_scraped_page(record: dict) -> bool:
+    """Determine if a record is a scraped page based on required keys."""
     required_keys = {"url", "type", "depth", "text"}
     return required_keys.issubset(record.keys())
 
 
 def resolve_input_files(scraped_dir: Path, selected_files: list[str]):
+    """Resolve user-selected files against the scraped directory, allowing for exact or partial matches."""
     if not selected_files:
         return list(scraped_dir.glob("*.json"))
 
@@ -206,12 +229,11 @@ def resolve_input_files(scraped_dir: Path, selected_files: list[str]):
 
     return list(dict.fromkeys(resolved))
 
-
-# =========================
 # Main pipeline
-# =========================
 
 def main(selected_files: list[str] | None = None):
+    """Main cleaning pipeline: process selected JSON files, apply cleaning and filtering, and save results."""
+
     SCRAPED_DIR = Path("data/01_extracted")
     OUTPUT_DIR = Path("data/02_clean")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -222,8 +244,7 @@ def main(selected_files: list[str] | None = None):
         print(f"Cleaning: {json_file.name}")
         file_stem = json_file.stem
 
-        with open(json_file, "r", encoding="utf-8") as f:
-            records = json.load(f)
+        records = load_json_records(json_file)
 
         cleaned_records = []
 
@@ -257,13 +278,10 @@ def main(selected_files: list[str] | None = None):
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(cleaned_records, f, ensure_ascii=False, indent=2)
 
-    print("Cleaning pipeline finished successfully.")
+    print("\n[PHASE 1 COMPLETE]")
 
 
-# =========================
-# Entry point
-# =========================
-
+# Execution entry point
 if __name__ == "__main__":
     print("Starting cleaning pipeline...")
     parser = argparse.ArgumentParser(description="Clean scraped JSON files")

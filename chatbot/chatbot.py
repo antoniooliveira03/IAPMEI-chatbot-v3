@@ -11,7 +11,7 @@ from rank_bm25 import BM25Okapi
 import re
 import torch
 
-
+# Load environment variables and initialize OpenAI client
 load_dotenv()
 client = OpenAI()
 cross_encoder_model = None
@@ -20,11 +20,13 @@ cross_encoder_model = None
 VECTOR_DIR = Path("data/05_vectorized/small/c600_60")
 
 def set_vector_dir(path):
+    """Set the global VECTOR_DIR variable to the specified path."""
     global VECTOR_DIR
     VECTOR_DIR = Path(path)
 
-# ---------------- Embedding ----------------
+# Embedding
 def embedding(text: str) -> np.ndarray:
+    """Generate an embedding vector for the given text using OpenAI's API."""
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=text
@@ -32,10 +34,12 @@ def embedding(text: str) -> np.ndarray:
     return np.array(response.data[0].embedding, dtype=np.float32).reshape(1, -1)
 
 def embed_query(query: str) -> np.ndarray:
+    """Generate an embedding vector for a query."""
     return embedding(query)
 
-# ---------------- FAISS Loader ----------------
+# FAISS Loader
 def load_faiss_index(vector_dir: Path):
+    """Load a FAISS index and its associated metadata from the specified directory."""
     index_path = vector_dir / "db.index"
     meta_path = vector_dir / "db.json"
 
@@ -47,8 +51,9 @@ def load_faiss_index(vector_dir: Path):
     return index, metadata
 
 
-# ---------------- Reranker ----------------
+# Reranker
 def get_cross_encoder():
+    """Load and return the cross-encoder model, caching it globally."""
     global cross_encoder_model
     if cross_encoder_model is None:
         from sentence_transformers import CrossEncoder
@@ -59,6 +64,7 @@ def get_cross_encoder():
     return cross_encoder_model
 
 def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
+    """Rerank candidate chunks using a cross-encoder model and return the top_k most relevant chunks."""
     model = get_cross_encoder()
     pairs = [(query, c["content"]) for c in candidate_chunks]
     with torch.inference_mode():
@@ -73,18 +79,22 @@ def rerank_chunks(query: str, candidate_chunks: list, top_k=5):
     return [c for _, c in scored[:top_k]]
 
 
-# ---------------- BM25 ----------------
+# BM25
 def tokenize(text):
+    """Simple tokenizer that lowercases and splits text into words, removing extra whitespace."""
     return re.findall(r"\w+", text.lower())
 
 def build_bm25(metadata):
+    """Build a BM25 index from the content of the metadata."""
     corpus = [tokenize(doc["content"]) for doc in metadata]
     bm25 = BM25Okapi(corpus)
     return bm25
 
 
-# ---------------- Hybrid Retrieval ----------------
+# Hybrid Retrieval
 def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6, weight_sparse=0.4, rerank=False):
+    """Perform hybrid retrieval by combining dense vector search with sparse BM25 scoring, and optionally reranking results."""
+
     # Dense retrieval
     q_vec = embed_query(query)
     q_vec = q_vec / np.linalg.norm(q_vec)
@@ -107,7 +117,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
     candidate_indices = sorted(hybrid_scores.keys(), key=lambda x: hybrid_scores[x], reverse=True)
     candidates = [metadata[i] for i in candidate_indices[:k]]
 
-    # ---------------- Rerank (optional) ----------------
+    # Rerank (optional) 
     if rerank:
         final_chunks = rerank_chunks(query, candidates, top_k=top_k)
     else:
@@ -116,7 +126,7 @@ def retrieve_hybrid(query, index, metadata, bm25, k=20,top_k=5, weight_dense=0.6
     return final_chunks
 
 
-# ---------------- Chatbot Answer ----------------
+# Chatbot Answer
 conversation_history = []
 
 def answer(user_query: str, index, 
@@ -126,6 +136,8 @@ def answer(user_query: str, index,
             weight_dense=0.4, 
             weight_sparse=0.6, 
             rerank=False):
+
+    """Generate an answer to the user's query by retrieving relevant context and using a language model, while maintaining conversation history."""
 
     global conversation_history
     max_history = 30
@@ -152,6 +164,7 @@ def answer(user_query: str, index,
         for c in context_chunks
     )
 
+    # Prompt construction
     prompt = f"""
         És um assistente especialista em programas de incentivos nacionais e regionais, como o PT2030, Compete2030, Alentejo2030, etc.
         Responde sempre em Português de Portugal.
@@ -177,6 +190,7 @@ def answer(user_query: str, index,
     messages.extend(conversation_history)
     messages.append({"role": "user", "content": user_query})
 
+    # Generate answer
     response = client.chat.completions.create(
         model=model,
         messages=messages,
@@ -185,14 +199,16 @@ def answer(user_query: str, index,
 
     final_answer = response.choices[0].message.content.strip()
 
+    # Update conversation history
     conversation_history.append({"role": "user", "content": user_query})
     conversation_history.append({"role": "assistant", "content": final_answer})
 
     print("\nAssistente:", final_answer)
     return final_answer, context_chunks
 
-# ---------------- Main Loop ----------------
+# Main pipeline
 def main():
+    """Main chatbot loop: load FAISS index and metadata, build BM25 index, and interact with the user until they choose to exit."""
     index, metadata = load_faiss_index(VECTOR_DIR)
 
     bm25 = build_bm25(metadata)
@@ -209,5 +225,6 @@ def main():
                     weight_sparse=0.6, 
                     rerank=False)
 
+# Execution entry point
 if __name__ == "__main__":
     main()

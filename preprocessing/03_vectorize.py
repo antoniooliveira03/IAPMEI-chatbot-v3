@@ -6,33 +6,36 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import json
 
+# Load environment variables and initialize OpenAI client
 load_dotenv()
 client = OpenAI()
 
+# Configurations
 chunk_size = 600
-chunk_overlap = 120
+chunk_overlap = 60
 embeddings_type = "small" # "large" or "small"
-
 
 # Directories
 chunk_dir = Path(f"data/03_chunked/c{chunk_size}_{chunk_overlap}")
 vector_dir = Path(f"data/05_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
-# ---------- Embedding ----------
+# Embedding
 def embedding(text: str) -> np.ndarray:
+    """Generate an embedding vector for the given text using OpenAI's API."""
     response = client.embeddings.create(
         model=f"text-embedding-3-{embeddings_type}",
         input=text
     )
     return np.array(response.data[0].embedding, dtype=np.float32)
 
-# ---------- FAISS DB ----------
+# FAISS DB
 def build_db(chunk_dir: Path):
+    """Build a FAISS index from chunked documents, returning the index and associated metadata."""
     metadata = []
     index = None
 
-    dim = 1536 if embeddings_type == "small" else 3072 # 3072 for text-embedding-3-large, 1536 for small
+    dim = 1536 if embeddings_type == "small" else 3072
 
     index = faiss.IndexFlatIP(dim) 
     print(f"[INFO] FAISS index initialized with dim={dim}")
@@ -44,7 +47,6 @@ def build_db(chunk_dir: Path):
             chunks = json.load(f)
 
         for chunk in chunks:
-            #combined_text = " ".join(chunk.get("topics", []) + [chunk.get("summary", ""), chunk["content"]])
             combined_text = chunk["content"]
             vec = embedding(combined_text)
             vec = vec / np.linalg.norm(vec)
@@ -57,14 +59,12 @@ def build_db(chunk_dir: Path):
                 "chunk_id": chunk["chunk_id"],
                 "fingerprint": chunk.get("fingerprint"),
                 "content": chunk["content"],
-              #  "summary": chunk.get("summary", ""),
-              #  "topics": chunk.get("topics", []),
                 "chunk_vector": vec.tolist()
             })
 
     return index, metadata
 
-# ---------- Run ----------
+# Execution entry point
 index, metadata = build_db(chunk_dir)
 
 faiss_index_path = vector_dir / "db.index"
@@ -75,4 +75,4 @@ faiss.write_index(index, str(faiss_index_path))
 with open(metadata_path, "w", encoding="utf-8") as f:
     json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-print("\n[OK] FAISS index and metadata saved")
+print("\n[PHASE 3 COMPLETE]")

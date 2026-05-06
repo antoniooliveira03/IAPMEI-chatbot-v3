@@ -1,8 +1,9 @@
 import subprocess
 
-# List your scripts in order
+# List scripts in order
 scripts = [
-    #"01_cleaning.py",
+    "summarised_data.py"
+    "01_cleaning.py",
     "02_chunk.py",
     "03_vectorize.py"
 ]

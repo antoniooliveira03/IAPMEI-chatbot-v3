@@ -1,3 +1,4 @@
+# Libraries
 import scrapy
 import io
 import re
@@ -5,6 +6,8 @@ from bs4 import BeautifulSoup
 from scrapy.linkextractors import LinkExtractor
 from urllib.parse import urlparse
 import logging
+import json
+import os
 
 # Silence PDF miner DEBUG logs
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
@@ -12,11 +15,28 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 
 class Portugal2030Spider(scrapy.Spider):
     name = "botscraper"
-    start_urls = ["https://www.iapmei.pt/"]
 
-    allowed_domains = ["iapmei.pt", "www.iapmei.pt"]
+    def start_requests(self):
+        """Initialize spider by loading config and generating start requests."""
+        # Load JSON config
+        config_path = os.path.join(os.getcwd(), "sites.json")
 
-    # ---------- Helpers ----------
+        with open(config_path) as f:
+            self.sites = json.load(f)
+
+        # Flatten all start URLs and domains
+        self.allowed_domains = []
+        
+        for site in self.sites:
+            self.allowed_domains.extend(site["allowed_domains"])
+
+            for url in site["start_urls"]:
+                yield scrapy.Request(
+                    url,
+                    callback=self.parse,
+                    errback=self.errback_log,
+                    meta={"site_name": site["name"]}
+                )
 
     def errback_log(self, failure):
         """Log failed requests without crashing the spider."""
@@ -56,8 +76,9 @@ class Portugal2030Spider(scrapy.Spider):
         text = re.sub(r'\s+([.,;:!?])', r'\1', text)
         return text.strip()
 
-    # ---------- Spider Logic ----------
+    # Spider Logic
     def parse(self, response):
+        """Parse HTML pages, extract text, and follow links."""
         # Skip pages whose URL contains "arquivo"
         if "arquivo" in response.url.lower():
             self.logger.info(f"Skipping arquivo page: {response.url}")
@@ -86,7 +107,8 @@ class Portugal2030Spider(scrapy.Spider):
                 yield response.follow(
                     link.url,
                     callback=self.parse,
-                    errback=self.errback_log
+                    errback=self.errback_log,
+                    meta=response.meta
                 )
 
         # Yield the page
@@ -94,6 +116,7 @@ class Portugal2030Spider(scrapy.Spider):
             yield {
                 "url": response.url,
                 "type": "html",
+                "site": response.meta.get("site_name"),
                 "depth": response.meta.get("depth", 0),
                 "text": text
             }

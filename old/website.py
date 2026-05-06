@@ -4,7 +4,7 @@ from streamlit_option_menu import option_menu
 
 import login as l
 import history as h
-from chatbot import load_faiss_index, answer, build_bm25
+from chatbot.chatbot import load_faiss_index, answer, build_bm25
 
 
 

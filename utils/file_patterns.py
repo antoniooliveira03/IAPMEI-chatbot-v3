@@ -1,6 +1,4 @@
-# =========================
 # Boilerplate patterns
-# =========================
 
 FILE_PATTERNS = {
     "compete2030": [
@@ -40,19 +38,21 @@ FILE_PATTERNS = {
     ]
 }
 
+# Navigation words
 NAV_WORDS = {
     "início", "contactos", "eventos", "notícias", "ajuda",
     "menu", "seguir", "newsletter", "subscreva",
     "pt", "en", "login", "registar", "pesquisar"
 }
 
+# Common Portuguese verbs
 COMMON_PT_VERBS = {
     "é", "são", "foi", "foram", "ser", "estar", "tem", "têm",
     "permite", "permitir", "visa", "promove", "apoia",
     "inclui", "consiste", "define", "aplica"
 }
 
-
+# Forbidden topics
 FORBIDDEN_TOPICS = {
     "cookies",
     "termos e condições",
