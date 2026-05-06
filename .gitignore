@@ -1,7 +1,7 @@
 /env
 /myenv
+/old
 /.ipynb_checkpoints
-/data/
 
 /guidelines
 /models
@@ -9,11 +9,13 @@
 /evaluation/.ipynb_checkpoints
 
 
+
 .env
 __pycache__/
 
-
+*.index
 *.json
+*.DS_Store
 
 botscraper/.scrapy
 
