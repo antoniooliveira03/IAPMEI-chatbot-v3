@@ -13,7 +13,7 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = repo_root / "data/05_vectorized/small/c400_40"
+VECTOR_DIR = repo_root / "data/04_vectorized/small/c400_40"
 
 HISTORY_DIR = repo_root / "conversation_history"
 HISTORY_DIR.mkdir(exist_ok=True)

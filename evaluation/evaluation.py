@@ -55,7 +55,7 @@ with open("evaluation/evaluation_dataset_v2.json", "r", encoding="utf-8") as f:
 eval_dataset = utils.json_to_documents(data)
 
 # Load FAISS index and metadata
-chatbot.set_vector_dir(f"data/05_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
+chatbot.set_vector_dir(f"data/04_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
 index, metadata = chatbot.load_faiss_index(chatbot.VECTOR_DIR)
 bm25=chatbot.build_bm25(metadata)
 print(f"Index and metadata loaded at {chatbot.VECTOR_DIR}")

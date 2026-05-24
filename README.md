@@ -32,7 +32,7 @@ A Portuguese-language chatbot for SMEs that uses web-scraped policy content, cle
 - `data/01_extracted`: raw scraper output
 - `data/02_clean`: cleaned documents ready for chunking
 - `data/03_chunked`: chunked document output
-- `data/05_vectorized`: FAISS index + metadata for retrieval
+- `data/04_vectorized`: FAISS index + metadata for retrieval
 - `evaluation/`: evaluation datasets and results
 - `models/`: FastText language model and optional model resources
 
@@ -111,8 +111,8 @@ python preprocessing/03_vectorize.py
 ```
 
 ### Output location
-- `data/05_vectorized/small/c600_60/db.index`
-- `data/05_vectorized/small/c600_60/db.json`
+- `data/04_vectorized/small/c600_60/db.index`
+- `data/04_vectorized/small/c600_60/db.json`
 
 ### Notes
 - Default embedding model: `text-embedding-3-small`
@@ -141,7 +141,7 @@ Open the Gradio interface at:
 
 ### Notes
 - The website script resolves repo-relative paths so it works when executed from `website/`
-- The default vector directory in the web UI is loaded from `data/05_vectorized/small/c400_40`
+- The default vector directory in the web UI is loaded from `data/04_vectorized/small/c400_40`
 
 ## 6) Evaluation
 ### What it does
@@ -186,7 +186,7 @@ python preprocessing/00_master.py
 
 ## Troubleshooting
 - `ModuleNotFoundError: No module named 'chatbot'`: run from repo root or add repo root to `sys.path`
-- `could not open data/05_vectorized/.../db.index`: ensure `VECTOR_DIR` is repo-relative and the index exists
+- `could not open data/04_vectorized/.../db.index`: ensure `VECTOR_DIR` is repo-relative and the index exists
 - Scrapy outputs are written to `data/01_extracted`; verify crawler completed successfully
 - If FastText fails, confirm `models/lid.176.bin` is present and accessible
 
