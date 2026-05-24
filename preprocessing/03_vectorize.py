@@ -17,7 +17,7 @@ embeddings_type = "small" # "large" or "small"
 
 # Directories
 chunk_dir = Path(f"data/03_chunked/c{chunk_size}_{chunk_overlap}")
-vector_dir = Path(f"data/05_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
+vector_dir = Path(f"data/04_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
 vector_dir.mkdir(parents=True, exist_ok=True)
 
 # Embedding
