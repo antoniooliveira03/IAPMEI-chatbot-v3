@@ -1,73 +1,217 @@
 # IAPMEI Chatbot
 
-A Portuguese-language chatbot designed to help SMEs find information about PT2030 investment incentives, using a vector-based knowledge base and web-scraped policy documents.
+A Portuguese-language chatbot for SMEs that uses web-scraped policy content, cleaning and chunking pipelines, FAISS vector retrieval, and OpenAI-powered response generation.
 
-## ✅ Features
-- Web-scraping pipeline via Scrapy in `botscraper/`
-- Text cleaning and preprocessing pipeline (`01_cleaning.py`, `02_chunk.py`, etc.)
-- Embeddings + FAISS vector index construction (`03_vectorize.py`)
-- Portuguese detection with FastText model in `models/`
-- Web UI for chat interaction (`gradio_website.py`)
-- Offline evaluation suite under `evaluation/`
+## ✅ What this repository contains
+- `botscraper/`: Scrapy project that crawls configured sites and writes JSON records per site
+- `preprocessing/01_cleaning.py`: text cleaning, filtering, and Portuguese language validation
+- `preprocessing/02_chunk.py`: chunk creation, deduplication, and metadata assembly
+- `preprocessing/03_vectorize.py`: embedding generation and FAISS index building
+- `chatbot/chatbot.py`: retrieval, reranking, and answer generation logic
+- `website/gradio_website.py`: Gradio chatbot interface for local use
+- `evaluation/evaluation.py`: evaluation harness for dataset-based model comparison
+- `data/`: pipeline outputs and generated artifacts
+- `conversation_history/`, `chat_history/`: persistent session storage
+- `models/`: language detection and model reference files
 
-## 📁 Repository Structure
-- `00_master.py`: orchestrates execution of end-to-end data pipeline
-- `01_cleaning.py`: cleaning and normalization of raw extracted text
-- `02_chunk.py`: chunking, filtering and metadata tagging
-- `03_vectorize.py`: embedding and indexing (FAISS)
-- `chatbot.py`: query / response orchestration logic
-- `gradio_website.py`: Gradio-based chatbot interface
-- `evaluation.py`: evaluation metrics and test harness
-- `file_patterns.py`: text patterns for cleanup
-- `botscraper/`: Scrapy project for document extraction
-- `data/`: generated artifacts by stage (`00_summaries`, `01_extracted`, etc.)
-- `models/`: language filtering model and embeddings model references
-- `conversation_history/`, `chat_history/`: persisted conversation logs
+## 🔧 Prerequisites
+- Python 3.10 or newer
+- Run from repo root for all commands unless otherwise noted
+- Install dependencies:
+  ```bash
+  source env/bin/activate
+  pip install -r requirements.txt
+  ```
+- Required environment variables in a `.env` file at repo root:
+  ```bash
+  OPENAI_API_KEY=your_api_key_here
+  ```
 
-## 🛠️ Prerequisites
-- Python 3.10+ (or compatible env)
-- `pip install -r requirements.txt`
-- Optional: GPU or CPU-friendly transformer provider configured in `03_vectorize.py`
+## 📂 Important directories
+- `botscraper/`: Scrapy project and spider
+- `data/01_extracted`: raw scraper output
+- `data/02_clean`: cleaned documents ready for chunking
+- `data/03_chunked`: chunked document output
+- `data/05_vectorized`: FAISS index + metadata for retrieval
+- `evaluation/`: evaluation datasets and results
+- `models/`: FastText language model and optional model resources
 
-## 🚀 Quick Start
-1. Activate env:
-   - `source env/bin/activate`
-2. Scrape content:
-   - `cd botscraper`
-   - `scrapy crawl botscraper`
-3. Build KB pipeline:
-   - `python 01_cleaning.py`
-   - `python 02_chunk.py`
-   - `python 03_vectorize.py`
-4. Run chatbot UI:
-   - `python gradio_website.py`
-5. Open UI at `http://localhost:7860` (default Gradio)
+## 1) Scraping with `botscraper`
+### What it does
+The scraper reads `botscraper/sites.json` and crawls the configured start URLs. Extracted pages are filtered, cleaned, and saved as line-delimited JSON files by site.
 
-## 🧪 Evaluation
-- Build the query+answer evaluation dataset in `evaluation/` (JSON files provided)
-- Execute:
-  - `python evaluation.py`
-- Metrics include precision, recall, nDCG, or custom matching (variable by implementation)
+### Run it
+From the repo root:
+```bash
+cd botscraper
+scrapy crawl botscraper
+```
 
-## ⚙️ Customization
-- Adjust chunk size / overlap in `02_chunk.py`
-- Change embedding provider in `03_vectorize.py`: OpenAI, local sentence-transformers, or other vector models
-- Add postprocessors in `chatbot.py` for filtering or fact-checking
+### Output location
+- `data/01_extracted/<site>.json`
 
-## 📝 Notes
-- The project is focused on PT2030 incentive guidance; data source and domain are PG Portuguese.
-- Keep `conversation_history/` and `chat_history/` for iterative training and auditing.
-- `models/fasttext` model is used for language classification and to drop non-PT content.
+### Notes
+- Scrapy obeys `robots.txt`
+- Output path is configured in `botscraper/botscraper/settings.py` via `DATA_BASE_PATH`
+- If you want to change crawl depth, update `DEPTH_LIMIT` in `botscraper/botscraper/settings.py`
+- The spider will skip pages containing `arquivo`, login/cookies/legal pages, and other unwanted URLs.
 
-## 💡 Helpful commands
-- `python 00_master.py` to execute complete ETL flow
+## 2) Cleaning and filtering
+### What it does
+`preprocessing/01_cleaning.py` loads scraped JSON files, removes boilerplate, normalizes whitespace, drops navigation-heavy paragraphs, detects Portuguese with FastText, and saves cleaned JSON.
 
-## 📌 Contribution
-1. Fork the repo
-2. Create branch (`feature/x`)
-3. Add docs + tests
-4. PR with clear goal and context
+### Run it
+From the repo root:
+```bash
+python preprocessing/01_cleaning.py
+```
+
+### Optional: clean selected files only
+```bash
+python preprocessing/01_cleaning.py file1 file2
+```
+
+### Output location
+- `data/02_clean/<filename>.json`
+
+### Notes
+- `preprocessing/01_cleaning.py` supports both JSON arrays and JSONL scraped output
+- It uses `models/lid.176.bin` for Portuguese detection
+
+## 3) Chunking text
+### What it does
+`preprocessing/02_chunk.py` converts cleaned documents into chunks with overlap, removes duplicate chunks, and stores chunk metadata.
+
+### Run it
+From the repo root:
+```bash
+python preprocessing/02_chunk.py
+```
+
+### Output location
+- `data/03_chunked/c<chunk_size>_<chunk_overlap>/<filename>.json`
+
+### Default settings
+- chunk size: `600`
+- chunk overlap: `60`
+
+### Notes
+- Website pages are split into text chunks
+- Q&A-style documents are preserved as single entries
+- Chunk content is annotated with a human-readable source title
+
+## 4) Vectorizing and building FAISS index
+### What it does
+`preprocessing/03_vectorize.py` embeds every chunk using OpenAI embeddings, normalizes vectors, stores them in FAISS, and saves metadata.
+
+### Run it
+From the repo root:
+```bash
+python preprocessing/03_vectorize.py
+```
+
+### Output location
+- `data/05_vectorized/small/c600_60/db.index`
+- `data/05_vectorized/small/c600_60/db.json`
+
+### Notes
+- Default embedding model: `text-embedding-3-small`
+- Dimensionality is set to `1536` for the `small` embedding type
+- If you need a different embedding model, update `embeddings_type` in `preprocessing/03_vectorize.py`
+
+## 5) Running the chatbot
+### CLI chatbot
+From the repo root:
+```bash
+python chatbot/chatbot.py
+```
+
+### Web UI chatbot
+From the repo root:
+```bash
+python website/gradio_website.py
+```
+Open the Gradio interface at:
+- `http://localhost:7860`
+
+### What the chatbot uses
+- `chatbot/chatbot.py` loads the FAISS index and metadata
+- It combines dense vector search, BM25 sparse retrieval, and optional reranking
+- It calls the OpenAI `chat.completions` API to generate answers
+
+### Notes
+- The website script resolves repo-relative paths so it works when executed from `website/`
+- The default vector directory in the web UI is loaded from `data/05_vectorized/small/c400_40`
+
+## 6) Evaluation
+### What it does
+`evaluation/evaluation.py` loads an evaluation dataset, retrieves context from the index, and measures model responses using `ragas`.
+
+### Run it
+From the repo root:
+```bash
+python evaluation/evaluation.py
+```
+
+### Output location
+- `evaluation/results/evaluation_results_*.csv`
+
+### Notes
+- The script loads `evaluation/evaluation_dataset_v2.json`
+- It uses OpenAI embeddings and `gpt-4o-mini` by default
+- Results are saved as a CSV file under `evaluation/results/`
+
+## 7) Optional full pipeline orchestration
+`preprocessing/00_master.py` is intended to run the cleaning, chunking, and vectorization scripts in sequence. If it is not working, use the commands above manually.
+
+### Run it
+From the repo root:
+```bash
+python preprocessing/00_master.py
+```
+
+## Configuration and customization
+### `.env` variables
+- `OPENAI_API_KEY`: required for embeddings and chat completions
+- Add any other OpenAI-related variables your environment requires
+
+### Scraper configuration
+- Edit `botscraper/sites.json` to add or remove start URLs and allowed domains
+- `botscraper/botscraper/settings.py` contains `DATA_BASE_PATH`, `DEPTH_LIMIT`, and Scrapy crawl settings
+
+### Preprocessing tuning
+- Change `chunk_size` and `chunk_overlap` in `preprocessing/02_chunk.py`
+- Change embedding size and model in `preprocessing/03_vectorize.py`
+- Change retrieval weights in `chatbot/chatbot.py`
+
+## Troubleshooting
+- `ModuleNotFoundError: No module named 'chatbot'`: run from repo root or add repo root to `sys.path`
+- `could not open data/05_vectorized/.../db.index`: ensure `VECTOR_DIR` is repo-relative and the index exists
+- Scrapy outputs are written to `data/01_extracted`; verify crawler completed successfully
+- If FastText fails, confirm `models/lid.176.bin` is present and accessible
+
+## Recommended command sequence
+```bash
+source env/bin/activate
+pip install -r requirements.txt
+cd botscraper
+scrapy crawl botscraper
+cd ..
+python preprocessing/01_cleaning.py
+python preprocessing/02_chunk.py
+python preprocessing/03_vectorize.py
+python website/gradio_website.py
+```
+
+## File overview
+- `botscraper/`: Scrapy spider, items, pipelines, and settings
+- `preprocessing/01_cleaning.py`: cleaning pipeline for raw text
+- `preprocessing/02_chunk.py`: chunk generation and deduplication
+- `preprocessing/03_vectorize.py`: embedding + FAISS index creation
+- `chatbot/chatbot.py`: retrieval and chat response loop
+- `website/gradio_website.py`: Gradio interface
+- `evaluation/evaluation.py`: metrics evaluation workflow
 
 ---
 
-Maintained by António Oliveira.
+Maintained by António Oliveira
