@@ -1,6 +1,11 @@
+import sys
+from pathlib import Path
+
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo_root))
+
 import gradio as gr
 from chatbot.chatbot import load_faiss_index, build_bm25, answer
-from pathlib import Path
 import json
 import time
 import uuid
@@ -8,14 +13,14 @@ from datetime import datetime
 
 
 
-VECTOR_DIR = Path("data/05_vectorized/small/c400_40")
+VECTOR_DIR = repo_root / "data/05_vectorized/small/c400_40"
 
-HISTORY_DIR = Path("conversation_history")
+HISTORY_DIR = repo_root / "conversation_history"
 HISTORY_DIR.mkdir(exist_ok=True)
 
-USERS_FILE = Path("conversation_history/users.json")
+USERS_FILE = HISTORY_DIR / "users.json"
 if not USERS_FILE.exists():
-    with open(USERS_FILE, "w") as f:
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump({}, f)
 
 
@@ -209,7 +214,7 @@ def handle_login(email, password):
 
     # Return outputs: message, user_state, dropdown, buttons enabled, chat input enabled, and clear email/password boxes
     return (
-        message,                        # login status
+        message,                         # login status
         user_email,                      # user_state
         gr.update(choices=sessions, value=new_session, interactive=True),  # conversation list
         gr.update(interactive=True),     # new_chat_btn

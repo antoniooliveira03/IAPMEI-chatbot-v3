@@ -48,20 +48,20 @@ weight_sparse = 0.6
 rerank = False
 v = 5
 
-# ---- Load evaluation dataset ----
+# Load evaluation dataset 
 with open("evaluation/evaluation_dataset_v2.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
 eval_dataset = utils.json_to_documents(data)
 
-# ---- Load FAISS index and metadata ----
+# Load FAISS index and metadata
 chatbot.set_vector_dir(f"data/05_vectorized/{embeddings_type}/c{chunk_size}_{chunk_overlap}")
 index, metadata = chatbot.load_faiss_index(chatbot.VECTOR_DIR)
 bm25=chatbot.build_bm25(metadata)
 print(f"Index and metadata loaded at {chatbot.VECTOR_DIR}")
 
 
-# ---- Populate evaluation dataset with retrieved contexts ----
+# Populate evaluation dataset with retrieved contexts
 filename = f"eval_dataset_filled_{embeddings_type}_c{chunk_size}_{chunk_overlap}__{k}_{top_k}_{weight_dense}_{weight_sparse}_{rerank}_v{v}.json"
 filepath = Path("evaluation") / filename
 
@@ -89,25 +89,7 @@ else:
     with open(filepath, "r") as f:
         eval_dataset = json.load(f)
 
-
-# ---- Instantiate metrics ----
-from ragas.metrics import (
-    AnswerRelevancy,
-    Faithfulness,
-    ContextPrecision,
-    ContextRecall,
-    AnswerSimilarity
-)
-
-metrics_to_compute = [
-    AnswerRelevancy(),
-    Faithfulness(),
-    ContextPrecision(),
-    ContextRecall(),
-    AnswerSimilarity()
-]
-
-# ---- Evaluate ----
+# Evaluate
 
 print("Starting evaluation...")
 
@@ -130,7 +112,7 @@ embeddings = OpenAIEmbeddings(model=f"text-embedding-3-{embeddings_type}")
 
 # Evaluate
 result = evaluate(dataset, embeddings=embeddings, 
-                  llm=llm, allow_nest_asyncio=True) # , metrics=metrics_to_compute
+                  llm=llm, allow_nest_asyncio=True)
 
 
 print(f"{filename}: \n\n{result}")
