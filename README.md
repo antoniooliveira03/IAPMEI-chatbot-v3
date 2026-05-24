@@ -51,7 +51,6 @@ scrapy crawl botscraper
 - `data/01_extracted/<site>.json`
 
 ### Notes
-- Scrapy obeys `robots.txt`
 - Output path is configured in `botscraper/botscraper/settings.py` via `DATA_BASE_PATH`
 - If you want to change crawl depth, update `DEPTH_LIMIT` in `botscraper/botscraper/settings.py`
 - The spider will skip pages containing `arquivo`, login/cookies/legal pages, and other unwanted URLs.
